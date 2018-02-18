@@ -1,0 +1,103 @@
+package main
+
+import (
+	"database/sql"
+	"encoding/json"
+	"github.com/brianglass/orthocal"
+	"github.com/gorilla/mux"
+	"io"
+	"log"
+	"net/http"
+	"strconv"
+)
+
+type CalendarServer struct {
+	db        *sql.DB
+	useJulian bool
+	doJump    bool
+}
+
+func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool) *CalendarServer {
+	var self CalendarServer
+
+	self.db = db
+	self.useJulian = useJulian
+	self.doJump = doJump
+
+	r := router.Methods("GET").Subrouter()
+	r.HandleFunc("/{year}/{month}/", self.monthHandler)
+	r.HandleFunc("/{year}/{month}/{day}/", self.dayHandler)
+
+	return &self
+}
+
+func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+
+	year, e := strconv.Atoi(vars["year"])
+	if e != nil {
+		http.Error(writer, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	month, e := strconv.Atoi(vars["month"])
+	if e != nil {
+		http.Error(writer, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	day, e := strconv.Atoi(vars["day"])
+	if e != nil {
+		http.Error(writer, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	// FIXME: NewDay doesn't barf if we choose an invalid day (e.g. February 31)
+	Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
+
+	writer.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(writer)
+	encoder.SetIndent("", "\t")
+
+	e = encoder.Encode(Day)
+	if e != nil {
+		http.Error(writer, "Not Found", http.StatusInternalServerError)
+		log.Printf("Could not marshal json for dayHandler: %#n.", e)
+	}
+}
+
+func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *http.Request) {
+	vars := mux.Vars(request)
+
+	year, e := strconv.Atoi(vars["year"])
+	if e != nil {
+		http.Error(writer, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	month, e := strconv.Atoi(vars["month"])
+	if e != nil {
+		http.Error(writer, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	encoder := json.NewEncoder(writer)
+	encoder.SetIndent("", "\t")
+
+	io.WriteString(writer, "[")
+	for day := 1; day <= 31; day++ {
+		if day > 1 {
+			io.WriteString(writer, ", ")
+		}
+		// FIXME: NewDay doesn't barf if we choose an invalid day (e.g. February 31)
+		Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
+
+		e = encoder.Encode(Day)
+		if e != nil {
+			http.Error(writer, "Not Found", http.StatusInternalServerError)
+			log.Printf("Could not marshal json for dayHandler: %#n.", e)
+		}
+	}
+	io.WriteString(writer, "]")
+}
