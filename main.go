@@ -12,17 +12,28 @@ import (
 
 var (
 	router = mux.NewRouter()
+	ocadb  *sql.DB
 )
 
-func main() {
-	ocadb, e := sql.Open("sqlite3", "oca_calendar.db")
-	if e != nil {
+func init() {
+	var e error
+
+	if ocadb, e = sql.Open("sqlite3", "oca_calendar.db"); e != nil {
 		log.Printf("Got error opening database: %#n. Exiting.", e)
 		os.Exit(1)
 	}
 
-	ocaRouter := router.PathPrefix("/oca/")
-	NewCalendarServer(ocaRouter, ocadb, false, true)
+	if e = ocadb.Ping(); e != nil {
+		log.Printf("Got error opening database: %#n. Exiting.", e)
+		os.Exit(1)
+	}
+}
+
+func main() {
+	defer ocadb.Close()
+
+	ocaRoute := router.PathPrefix("/oca/")
+	NewCalendarServer(ocaRoute, ocadb, false, true)
 
 	router.Use(handlers.CompressHandler)
 

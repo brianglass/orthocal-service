@@ -52,7 +52,6 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 		return
 	}
 
-	// FIXME: NewDay doesn't barf if we choose an invalid day (e.g. February 31)
 	Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
 
 	writer.Header().Set("Content-Type", "application/json")
@@ -87,11 +86,16 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 
 	io.WriteString(writer, "[")
 	for day := 1; day <= 31; day++ {
+		Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
+
+		// NewDay automatically wraps, so break out once we hit the next month
+		if Day.Month != month {
+			break
+		}
+
 		if day > 1 {
 			io.WriteString(writer, ", ")
 		}
-		// FIXME: NewDay doesn't barf if we choose an invalid day (e.g. February 31)
-		Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
 
 		e = encoder.Encode(Day)
 		if e != nil {
