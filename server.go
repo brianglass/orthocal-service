@@ -99,7 +99,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 
 		e = encoder.Encode(Day)
 		if e != nil {
-			http.Error(writer, "Not Found", http.StatusInternalServerError)
+			http.Error(writer, "Server Error", http.StatusInternalServerError)
 			log.Printf("Could not marshal json for dayHandler: %#n.", e)
 		}
 	}
