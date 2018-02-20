@@ -1,0 +1,29 @@
+<html>
+	<head>
+		<title>Orthodox Calendar Service</title>
+	</head>
+	<body>
+		<h1>Orthodox Calendar Service</h1>
+		<p>Orthocal-service is an Eastern Orthodox calendar service providing a
+		RESTful api describing commemorations, fasting, scripture readings and
+		other information for each day of the liturgical year.
+		</p>
+		<p>Presently the service is Alpha-quality. Use at your own risk. The
+		plan is to eventually provide support for major US jurisdictions, but
+		presently only the OCA is supported.
+		</p>
+		<p>Information for a day of the year can be fetched by including the
+		date in the url as follows:
+		</p>
+		<blockquote>
+			/oca/&lt;year&gt;/&lt;month&gt;/&lt;day&gt;/<br/>
+			/oca/&lt;year&gt;/&lt;month&gt;/
+		</blockquote>
+		<p>For example:</p>
+		<blockquote><a href="/oca/2018/2/20/">/oca/2018/2/20/</a></blockquote>
+		<p>Or:</p>
+		<blockquote><a href="/oca/2018/2/">/oca/2018/2/</a></blockquote>
+		<p>To get information for today, simply leave off the date as follows:</p>
+		<blockquote><a href="/oca/">/oca/</a></blockquote>
+	</body>
+</html>

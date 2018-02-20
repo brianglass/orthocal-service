@@ -18,8 +18,9 @@ FROM alpine:latest
 
 WORKDIR /root
 
-COPY --from=builder /go/src/github.com/brianglass/orthocal-service/orthocal-service .
 COPY --from=builder /go/src/github.com/brianglass/orthocal/oca_calendar.db .
+COPY --from=builder /go/src/github.com/brianglass/orthocal-service/orthocal-service .
+COPY templates ./templates
 
 EXPOSE 8080
 ENTRYPOINT ./orthocal-service

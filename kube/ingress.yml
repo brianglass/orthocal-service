@@ -1,0 +1,11 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: basic-ingress
+  namespace: orthocal
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: orthocal-ip
+spec:
+  backend:
+    serviceName: orthocal-http
+    servicePort: 80
