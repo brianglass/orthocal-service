@@ -14,14 +14,16 @@ import (
 
 type CalendarServer struct {
 	db        *sql.DB
+	bible     *orthocal.Bible
 	useJulian bool
 	doJump    bool
 }
 
-func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool) *CalendarServer {
+func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *CalendarServer {
 	var self CalendarServer
 
 	self.db = db
+	self.bible = bible
 	self.useJulian = useJulian
 	self.doJump = doJump
 
@@ -37,7 +39,7 @@ func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool) *C
 func (self *CalendarServer) todayHandler(writer http.ResponseWriter, request *http.Request) {
 	today := time.Now()
 	log.Printf("Processing today: %s", today)
-	Day := orthocal.NewDay(today.Year(), int(today.Month()), today.Day(), self.useJulian, self.doJump, self.db)
+	Day := orthocal.NewDay(today.Year(), int(today.Month()), today.Day(), self.useJulian, self.doJump, self.db, self.bible)
 
 	writer.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(writer)
@@ -71,7 +73,7 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 		return
 	}
 
-	Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
+	Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db, self.bible)
 
 	writer.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(writer)
@@ -105,7 +107,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 
 	io.WriteString(writer, "[")
 	for day := 1; day <= 31; day++ {
-		Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db)
+		Day := orthocal.NewDay(year, month, day, self.useJulian, self.doJump, self.db, nil)
 
 		// NewDay automatically wraps, so break out once we hit the next month
 		if Day.Month != month {

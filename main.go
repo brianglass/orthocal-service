@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"github.com/brianglass/orthocal"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
@@ -12,7 +13,7 @@ import (
 )
 
 func main() {
-	var ocadb *sql.DB
+	var ocadb, bibledb *sql.DB
 	var e error
 
 	if ocadb, e = sql.Open("sqlite3", "oca_calendar.db"); e != nil {
@@ -21,12 +22,20 @@ func main() {
 	}
 	defer ocadb.Close()
 
+	if bibledb, e = sql.Open("sqlite3", "kjv.db"); e != nil {
+		log.Printf("Got error opening database: %#n. Exiting.", e)
+		os.Exit(1)
+	}
+	defer bibledb.Close()
+
+	bible := orthocal.NewBible(bibledb)
+
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", homeHandler)
 
-	ocaRoute := router.PathPrefix("/oca")
-	NewCalendarServer(ocaRoute, ocadb, false, true)
+	ocaRoute := router.PathPrefix("/api/oca")
+	NewCalendarServer(ocaRoute, ocadb, false, true, bible)
 
 	router.Use(logHeaderMiddleware)
 	router.Use(handlers.CompressHandler)
