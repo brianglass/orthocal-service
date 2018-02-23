@@ -14,8 +14,8 @@
 		<p>Orthocal-service is an Eastern Orthodox calendar service providing a
 		RESTful api describing commemorations, fasting, scripture readings and
 		other information for each day of the liturgical year. This service is
-		meant to be a tool for parish webmasters to use to provide this
-		information to parishioners and other guests.
+		meant to be a tool for mobile developers or parish webmasters to use to
+		provide this information to parishioners and other guests.
 		</p>
 		<p>Presently the service is Alpha-quality. Use at your own risk. The
 		plan is to eventually provide support for major US jurisdictions, but
@@ -23,6 +23,7 @@
 		<a href="https://github.com/brianglass/orthocal-service">Source code</a> and a 
 		<a href="https://hub.docker.com/r/brianglass/orthocal-service/">docker
 		image</a> for self-hosting are freely available.  </p>
+		<h2>RESTful API</h2>
 		<p>Information for a day of the year can be fetched by including the
 		jurisdiction and date in the url as follows:
 		</p>
@@ -38,5 +39,8 @@
 		<blockquote><a href="/api/oca/2018/2/">/api/oca/2018/2/</a></blockquote>
 		<p>To get information for today, simply leave off the date as follows:</p>
 		<blockquote><a href="/api/oca/">/api/oca/</a></blockquote>
+		<h2>Calendar</h2>
+		<p>A very rough ical feed is also available at:</p>
+		<blockquote><a href="/api/oca/ical/">/api/oca/ical/</a></p>
 	</body>
 </html>
