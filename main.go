@@ -37,7 +37,7 @@ func main() {
 	ocaRoute := router.PathPrefix("/api/oca")
 	NewCalendarServer(ocaRoute, ocadb, false, true, bible)
 
-	router.Use(logHeaderMiddleware)
+	// router.Use(logHeaderMiddleware)
 	router.Use(handlers.CompressHandler)
 
 	http.ListenAndServe(":8080", handlers.CombinedLoggingHandler(os.Stdout, router))
