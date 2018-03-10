@@ -14,6 +14,7 @@ FROM alpine:latest
 
 WORKDIR /root
 
+RUN apk --no-cache add tzdata
 COPY --from=builder /go/src/github.com/brianglass/orthocal/*.db ./
 COPY templates ./templates
 COPY --from=builder /go/src/github.com/brianglass/orthocal-service/orthocal-service ./

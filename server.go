@@ -23,11 +23,24 @@ const (
 	CalendarMaxDays   = 6 * 30
 )
 
+var (
+	TZ *time.Location
+)
+
 type CalendarServer struct {
 	db        *sql.DB
 	bible     *orthocal.Bible
 	useJulian bool
 	doJump    bool
+}
+
+func init() {
+	var e error
+	TZ, e = time.LoadLocation(CalendarTZ)
+	if e != nil {
+		TZ = time.UTC
+		log.Printf("Error loading timezone: %s, using UTC.", CalendarTZ)
+	}
 }
 
 func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *CalendarServer {
@@ -49,13 +62,7 @@ func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool, bi
 }
 
 func (self *CalendarServer) todayHandler(writer http.ResponseWriter, request *http.Request) {
-	var today time.Time
-	if tz, e := time.LoadLocation("America/Denver"); e == nil {
-		today = time.Now().In(tz)
-	} else {
-		today = time.Now()
-	}
-
+	today := time.Now().In(TZ)
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 	Day := factory.NewDay(today.Year(), int(today.Month()), today.Day(), self.bible)
 
@@ -148,13 +155,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 }
 
 func (self *CalendarServer) icalHandler(writer http.ResponseWriter, request *http.Request) {
-	var today time.Time
-	if tz, e := time.LoadLocation(CalendarTZ); e == nil {
-		today = time.Now().In(tz)
-	} else {
-		today = time.Now()
-	}
-
+	today := time.Now().In(TZ)
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 
 	writer.Header().Set("Content-Type", "text/calendar")
