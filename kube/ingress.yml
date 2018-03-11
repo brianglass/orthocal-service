@@ -6,6 +6,8 @@ metadata:
   annotations:
     kubernetes.io/ingress.global-static-ip-name: orthocal-ip
 spec:
+  tls:
+  - secretName: orthocal-info-tls
   backend:
     serviceName: orthocal-http
     servicePort: 80

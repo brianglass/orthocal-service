@@ -1,0 +1,18 @@
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: Certificate
+metadata:
+  name: orthocal-info
+  namespace: orthocal
+spec:
+  secretName: orthocal-info-tls
+  issuerRef:
+    name: letsencrypt
+  commonName: orthocal.info
+  dnsNames:
+  - orthocal.info
+  acme:
+    config:
+    - http01:
+        ingress: basic-ingress
+      domains:
+      - orthocal.info
