@@ -10,11 +10,31 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
+
+const (
+	TimeZone = "America/Denver"
+)
+
+var (
+	TZ *time.Location
+)
+
+func init() {
+	var e error
+	TZ, e = time.LoadLocation(TimeZone)
+	if e != nil {
+		TZ = time.UTC
+		log.Printf("Error loading '%s' timezone, using UTC.", TimeZone)
+	}
+}
 
 func main() {
 	var ocadb, bibledb *sql.DB
 	var e error
+
+	// Open up all the requisite databases
 
 	if ocadb, e = sql.Open("sqlite3", "oca_calendar.db"); e != nil {
 		log.Printf("Got error opening database: %#n. Exiting.", e)
@@ -30,24 +50,22 @@ func main() {
 
 	bible := orthocal.NewBible(bibledb)
 
+	// Setup HTTP routers
+
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", homeHandler)
 
-	ocaRoute := router.PathPrefix("/api/oca")
-	NewCalendarServer(ocaRoute, ocadb, false, true, bible)
+	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
+	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
 
-	// router.Use(logHeaderMiddleware)
+	echoRouter := router.NewRoute().Subrouter()
+	NewSkill(echoRouter, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
+
+	// Launch the HTTP server
 	router.Use(handlers.CompressHandler)
-
+	router.Use(logHeaderMiddleware)
 	http.ListenAndServe(":8080", handlers.CombinedLoggingHandler(os.Stdout, router))
-}
-
-func logHeaderMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		log.Println(request.Header)
-		next.ServeHTTP(writer, request)
-	})
 }
 
 func homeHandler(writer http.ResponseWriter, request *http.Request) {
@@ -65,4 +83,11 @@ func homeHandler(writer http.ResponseWriter, request *http.Request) {
 		log.Println(e.Error())
 		return
 	}
+}
+
+func logHeaderMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		log.Println(request.Header)
+		next.ServeHTTP(writer, request)
+	})
 }

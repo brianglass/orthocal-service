@@ -19,8 +19,8 @@ func GenerateCalendar(writer io.Writer, start time.Time, numDays int, factory *o
 	fmt.Fprintf(writer, "X-WR-CALNAME:%s\r\n", CalendarName)
 	fmt.Fprintf(writer, "REFRESH-INTERVAL;VALUE=DURATION:PT%dH\r\n", CalendarTTL)
 	fmt.Fprintf(writer, "X-PUBLISHED-TTL:PT%dH\r\n", CalendarTTL)
-	fmt.Fprintf(writer, "TIMEZONE-ID:%s\r\n", CalendarTZ)
-	fmt.Fprintf(writer, "X-WR-TIMEZONE:%s\r\n", CalendarTZ)
+	fmt.Fprintf(writer, "TIMEZONE-ID:%s\r\n", TimeZone)
+	fmt.Fprintf(writer, "X-WR-TIMEZONE:%s\r\n", TimeZone)
 
 	for i := 0; i < numDays; i++ {
 		date := start.AddDate(0, 0, i)

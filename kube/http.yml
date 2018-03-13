@@ -44,3 +44,9 @@ spec:
         ports:
         - name: http
           containerPort: 8080
+        env:
+          - name: ALEXA_APP_ID
+            valueFrom:
+              secretKeyRef:
+                name: alexa-app-id
+                key: id

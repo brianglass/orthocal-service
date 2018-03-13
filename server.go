@@ -16,12 +16,7 @@ const (
 	CalendarWrapWidth = 60
 	CalendarName      = "Orthodox Feasts and Fasts"
 	CalendarTTL       = 12 // hours
-	CalendarTZ        = "America/Denver"
 	CalendarMaxDays   = 6 * 30
-)
-
-var (
-	TZ *time.Location
 )
 
 type CalendarServer struct {
@@ -31,16 +26,7 @@ type CalendarServer struct {
 	doJump    bool
 }
 
-func init() {
-	var e error
-	TZ, e = time.LoadLocation(CalendarTZ)
-	if e != nil {
-		TZ = time.UTC
-		log.Printf("Error loading '%s' timezone, using UTC.", CalendarTZ)
-	}
-}
-
-func NewCalendarServer(router *mux.Route, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *CalendarServer {
+func NewCalendarServer(router *mux.Router, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *CalendarServer {
 	var self CalendarServer
 
 	self.db = db

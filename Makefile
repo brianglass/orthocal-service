@@ -2,7 +2,7 @@ NAMESPACE=orthocal
 
 .PHONY: builder run deploy
 
-docker: *.go templates/*
+docker: Dockerfile *.go templates/*
 	docker build -t orthocal-service .
 	touch docker
 
@@ -17,4 +17,7 @@ run: docker
 deploy: docker
 	docker tag orthocal-service:latest brianglass/orthocal-service:latest
 	docker push brianglass/orthocal-service:latest
+	kubectl delete pods -l app=orthocal --namespace=${NAMESPACE}
+
+restart:
 	kubectl delete pods -l app=orthocal --namespace=${NAMESPACE}

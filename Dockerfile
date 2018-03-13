@@ -14,7 +14,10 @@ FROM alpine:latest
 
 WORKDIR /root
 
-RUN apk --no-cache add tzdata
+# Need tzdata to be able to load timeszones
+# need the CA certs to be able to make secure requests to Amazon
+RUN apk --no-cache add tzdata ca-certificates
+
 COPY --from=builder /go/src/github.com/brianglass/orthocal/*.db ./
 COPY templates ./templates
 COPY --from=builder /go/src/github.com/brianglass/orthocal-service/orthocal-service ./
