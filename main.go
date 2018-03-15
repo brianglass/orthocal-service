@@ -64,7 +64,7 @@ func main() {
 
 	// Launch the HTTP server
 	router.Use(handlers.CompressHandler)
-	router.Use(logHeaderMiddleware)
+	// router.Use(logHeaderMiddleware)
 	http.ListenAndServe(":8080", handlers.CombinedLoggingHandler(os.Stdout, router))
 }
 

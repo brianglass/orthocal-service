@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var verseRe = regexp.MustCompile(`</?verse.*?>`)
+var verseRe = regexp.MustCompile(`<.*?>`)
 
 type Skill struct {
 	db        *sql.DB
@@ -30,8 +30,8 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 	apps := map[string]interface{}{
 		"/echo/": alexa.EchoApplication{
 			AppID:    appid,
-			OnIntent: skill.IntentHandler,
-			OnLaunch: skill.IntentHandler,
+			OnIntent: skill.intentHandler,
+			OnLaunch: skill.launchHandler,
 		},
 	}
 
@@ -40,7 +40,7 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 	return &skill
 }
 
-func (self *Skill) IntentHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
+func (self *Skill) launchHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
 	today := time.Now().In(TZ)
 
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
@@ -48,11 +48,71 @@ func (self *Skill) IntentHandler(request *alexa.EchoRequest, response *alexa.Ech
 
 	var passage string
 	for _, verse := range day.Readings[0].Passage {
-		text := regexp.MustCompile(`<i>`).ReplaceAllString(verse.Content, `<emphasis level="strong">`)
-		text = regexp.MustCompile(`</i>`).ReplaceAllString(text, `</emphasis>`)
-		passage += verseRe.ReplaceAllString(text, "") + " "
+		passage += verseRe.ReplaceAllString(verse.Content, "") + " "
 	}
 
-	passage = fmt.Sprintf("<speak>%s</speak>", passage)
-	response.OutputSpeechSSML(passage).Card("Orthodox Daily Readings", "This is a test card.")
+	response.OutputSpeech(passage).Card("Orthodox Daily", passage)
+}
+
+func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
+	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
+
+	switch request.GetIntentName() {
+	case "FastingIntent":
+		var date time.Time
+
+		if when, e := request.GetSlotValue("date"); e == nil && len(when) > 0 {
+			date, e = time.ParseInLocation("2006-01-02", when, TZ)
+			if e != nil {
+				response.OutputSpeech("I didn't understand the date you requested.")
+				return
+			}
+		} else {
+			now := time.Now().In(TZ)
+			date = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
+		}
+
+		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), nil)
+		text := FastingStatement(day)
+
+		response.OutputSpeech(text).Card("Orthodox Daily", text)
+	}
+}
+
+func FastingStatement(day *orthocal.Day) string {
+	var text, when string
+
+	now := time.Now().In(TZ)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
+	date := time.Date(day.Year, time.Month(day.Month), day.Day, 0, 0, 0, 0, TZ)
+
+	hours := date.Sub(today).Hours()
+	if 0 <= hours && hours < 24 {
+		when = fmt.Sprintf("today, %s", date.Format("January 2"))
+	} else if 24 <= hours && hours < 48 {
+		when = fmt.Sprintf("tomorrow, %s", date.Format("January 2"))
+	} else {
+		when = fmt.Sprintf("%s", date.Format("Monday, January 2"))
+	}
+
+	switch day.FastLevel {
+	case 0:
+		text = fmt.Sprintf("%s, there is no fast.", when)
+	case 1:
+		// normal weekly fast
+		if len(day.FastException) > 0 {
+			text = fmt.Sprintf("%s, there is a fast: %s.", when, day.FastException)
+		} else {
+			text = fmt.Sprintf("%s, there is a fast.", when)
+		}
+	default:
+		// One of the four great fasts
+		if len(day.FastException) > 0 {
+			text = fmt.Sprintf("%s, is during the %s: %s.", when, day.FastLevelDesc, day.FastException)
+		} else {
+			text = fmt.Sprintf("%s, is during the %s.", when, day.FastLevelDesc)
+		}
+	}
+
+	return text
 }
