@@ -6,6 +6,7 @@ import (
 	"github.com/brianglass/orthocal"
 	"github.com/gorilla/mux"
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
+	"io/ioutil"
 	"log"
 	"regexp"
 	"strings"
@@ -106,6 +107,19 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		speach := builder.Build()
 
 		response.OutputSpeechSSML(speach).Card("Daily Readings", card)
+	case "AMAZON.HelpIntent":
+		content, e := ioutil.ReadFile("templates/help.ssml")
+		if e != nil {
+			log.Println(e.Error())
+			return
+		}
+
+		speach := string(content)
+		card := markupRe.ReplaceAllString(speach, "")
+
+		response.OutputSpeechSSML(speach).Card("Daily Readings", card)
+	case "AMAZON.StopIntent":
+	case "AMAZON.CancelIntent":
 	}
 }
 
@@ -161,8 +175,11 @@ func ScripturesSpeach(builder *alexa.SSMLTextBuilder, day *orthocal.Day, date ti
 
 		builder.AppendBreak("strong", "1500ms")
 		builder.AppendParagraph("The reading is from " + reference + ".")
-		builder.AppendParagraph("Let us attend.")
 		builder.AppendBreak("medium", "750ms")
+
+		if len(reading.Passage) == 0 {
+			builder.AppendParagraph("Orthodox Daily could not find that reading.")
+		}
 
 		for _, verse := range reading.Passage {
 			text := markupRe.ReplaceAllString(verse.Content, "")

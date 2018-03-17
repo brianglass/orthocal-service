@@ -1,0 +1,16 @@
+<speak>
+<p>Orthodox Daily makes it easy to access the daily scripture readings. Simply
+ask Alexa to open Orthodox Daily, and she will provide you with a few details
+about today, including the fasting rules, and then read the prescribed
+scriptures out loud. The scriptures are read from the King James Version and at
+present, follow <say-as interpret-as="spell-out">OCA</say-as> rubrics.</p>
+
+<p>You can also ask Alexa directly about fasting on a particular day. For
+instance, you can say, "Alexa, ask Orthodox daily about the fast on Friday," or
+"Alexa, ask Orthodox Daily about fasting on August 10."</p>
+
+<p>If you want to skip all the extra details and go straight to the scriptures,
+just say, "Alexa, ask Orthodox Daily to read the scriptures." If you missed the
+scriptures yesterday, you can say, "Alexa, ask Orthodox Daily to read the
+scriptures for yesterday.</p>
+</speak>
