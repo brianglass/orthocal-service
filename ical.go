@@ -54,9 +54,9 @@ func icalDescription(day *orthocal.Day) string {
 	}
 
 	if len(day.FastException) > 0 {
-		s += fmt.Sprintf("%s \u2013 %s\\n\\n", day.FastLevel, day.FastException)
+		s += fmt.Sprintf("%s \u2013 %s\\n\\n", day.FastLevelDesc, day.FastException)
 	} else {
-		s += fmt.Sprintf("%s\\n\\n", day.FastLevel)
+		s += fmt.Sprintf("%s\\n\\n", day.FastLevelDesc)
 	}
 
 	for _, r := range day.Readings {
