@@ -23,7 +23,7 @@ var epistles = map[string]string{
 	"romans":        "Saint Paul's letter to the Romans",
 	"corinthians":   "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to the Corinthians",
 	"galatians":     "Saint Paul's letter to the Galatians",
-	"ephesians":     "Saint Paul's letter to the Ephesianss",
+	"ephesians":     "Saint Paul's letter to the Ephesians",
 	"philipians":    "Saint Paul's letter to the Philipians",
 	"colosians":     "Saint Paul's letter to the Colosians",
 	"thessalonians": "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to the Thessalonians",
@@ -54,8 +54,8 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 	apps := map[string]interface{}{
 		"/echo/": alexa.EchoApplication{
 			AppID:    appid,
-			OnIntent: skill.intentHandler,
 			OnLaunch: skill.launchHandler,
+			OnIntent: skill.intentHandler,
 		},
 	}
 
@@ -65,34 +65,25 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 }
 
 func (self *Skill) launchHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
-	today := time.Now().In(TZ)
+	now := time.Now().In(TZ)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 	day := factory.NewDay(today.Year(), int(today.Month()), today.Day(), nil)
 
-	// Create the Card text
-	card := "Today is the " + day.Titles[0] + ".\n\n"
-	if len(day.FastException) > 0 {
-		card += fmt.Sprintf("%s \u2013 %s\n\n", day.FastLevelDesc, day.FastException)
-	} else {
-		card += fmt.Sprintf("%s\n\n", day.FastLevelDesc)
-	}
-	for _, reading := range day.Readings {
-		card += reading.Display + "\n"
-	}
-
-	// Create the speach
+	// Create the speech
 	builder := alexa.NewSSMLTextBuilder()
-	builder.AppendParagraph("Today is the " + day.Titles[0] + ".")
-	builder.AppendParagraph(FastingSpeach(day))
-	builder.AppendParagraph("Would you like me to read the scriptures?")
-	speach := builder.Build()
+	card := DaySpeech(builder, day)
+	builder.AppendParagraph(fmt.Sprintf("There are %d scripture readings.", len(day.Readings)))
+	builder.AppendParagraph("Would you like to hear the readings?")
+	speech := builder.Build()
 
 	// Prepare to read the first reading
 	response.EndSession(false)
 	response.SessionAttributes["original_intent"] = "Launch"
 	response.SessionAttributes["next_reading"] = 0
+	response.SessionAttributes["date"] = today.Format("2006-01-02")
 
-	response.OutputSpeechSSML(speach).Card("About Today", card)
+	response.OutputSpeechSSML(speech).Card("About Today", card)
 }
 
 func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
@@ -112,10 +103,12 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 	}
 
 	switch request.GetIntentName() {
-	case "Fasting":
+	case "Day":
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), nil)
-		text := FastingSpeach(day)
-		response.OutputSpeech(text).Card("Fasting", text)
+		builder := alexa.NewSSMLTextBuilder()
+		card := DaySpeech(builder, day)
+		speech := builder.Build()
+		response.OutputSpeechSSML(speech).Card("Fasting", card)
 	case "Scriptures":
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), self.bible)
 
@@ -125,13 +118,13 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 			card += reading.Display + "\n"
 		}
 
-		// build the Speach; we read the first reading on the initial intent
+		// build the Speech; we read the first reading on the initial intent
 		// request and subsequent readings on following AMAZON.YesIntent
 		// requests.
 		builder := alexa.NewSSMLTextBuilder()
 		builder.AppendParagraph(fmt.Sprintf("There are %d readings for %s.", len(day.Readings), date.Format("Monday, January 2")))
 		builder.AppendBreak("strong", "1500ms")
-		ReadingSpeach(builder, day.Readings[0])
+		ReadingSpeech(builder, day.Readings[0])
 		builder.AppendBreak("medium", "500ms")
 
 		// Prepare to read the second reading
@@ -139,14 +132,15 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		if len(day.Readings) > 1 {
 			response.EndSession(false)
 			response.SessionAttributes["next_reading"] = 1
+			response.SessionAttributes["date"] = date.Format("2006-01-02")
 			builder.AppendParagraph("Would you like to hear the next reading?")
 		} else {
 			response.EndSession(true)
 			builder.AppendParagraph("That is the end of the readings.")
 		}
 
-		speach := builder.Build()
-		response.OutputSpeechSSML(speach).Card("Daily Readings", card)
+		speech := builder.Build()
+		response.OutputSpeechSSML(speech).Card("Daily Readings", card)
 	case "AMAZON.YesIntent":
 		if intent, ok := request.Session.Attributes["original_intent"]; ok {
 			switch intent {
@@ -154,6 +148,19 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 				// Here we read a single one of the day's readings, tracking
 				// where we are in the Alexa session.
 				var nextReading int
+
+				// Get the date from the session; barf if there isn't one
+				if dateString, ok := request.Session.Attributes["date"]; ok {
+					var e error
+					date, e = time.ParseInLocation("2006-01-02", dateString.(string), TZ)
+					if e != nil {
+						response.OutputSpeech("I didn't understand the date you requested.")
+						return
+					}
+				} else {
+					response.OutputSpeech("I don't know which day you want me to read the scriptures for.")
+					return
+				}
 
 				day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), self.bible)
 
@@ -166,11 +173,12 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 					reading := day.Readings[nextReading]
 
 					builder := alexa.NewSSMLTextBuilder()
-					ReadingSpeach(builder, reading)
+					ReadingSpeech(builder, reading)
 					builder.AppendBreak("medium", "500ms")
 
 					// Prepare to read the next reading (or stop if we run out)
 					response.SessionAttributes["original_intent"] = intent
+					response.SessionAttributes["date"] = date.Format("2006-01-02")
 					if nextReading+1 >= len(day.Readings) {
 						response.EndSession(true)
 						response.SessionAttributes["next_reading"] = nil
@@ -181,8 +189,8 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 						builder.AppendParagraph("Would you like to hear the next reading?")
 					}
 
-					speach := builder.Build()
-					response.OutputSpeechSSML(speach)
+					speech := builder.Build()
+					response.OutputSpeechSSML(speech)
 				}
 			default:
 			}
@@ -196,17 +204,60 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 			return
 		}
 
-		speach := string(content)
-		card := markupRe.ReplaceAllString(speach, "")
+		speech := string(content)
+		card := markupRe.ReplaceAllString(speech, "")
 
-		response.OutputSpeechSSML(speach).Card("Daily Readings", card)
+		response.OutputSpeechSSML(speech).Card("Daily Readings", card)
 	case "AMAZON.StopIntent":
 	case "AMAZON.CancelIntent":
 	}
 }
 
-func FastingSpeach(day *orthocal.Day) string {
-	var text, when string
+func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
+	var feasts, saints string
+
+	when := WhenSpeach(day)
+
+	// Commemorations
+	if len(day.Feasts) > 1 {
+		feasts = fmt.Sprintf("The feasts celebrated are: %s.", HumanJoin(day.Feasts))
+	} else if len(day.Feasts) == 1 {
+		feasts = fmt.Sprintf("The feast of %s is celebrated.", day.Feasts[0])
+	}
+	if len(day.Saints) > 1 {
+		saints = fmt.Sprintf("The commemorations are for %s.", HumanJoin(day.Saints))
+	} else if len(day.Saints) == 1 {
+		saints = fmt.Sprintf("The commemoration is for %s.", day.Saints[0])
+	}
+
+	// Create the Card text
+	card := when + " is the " + day.Titles[0] + ".\n\n"
+	if len(day.FastException) > 0 {
+		card += fmt.Sprintf("%s \u2013 %s\n\n", day.FastLevelDesc, day.FastException)
+	} else {
+		card += fmt.Sprintf("%s\n\n", day.FastLevelDesc)
+	}
+	if len(feasts) > 0 {
+		card += feasts + "\n\n"
+	}
+	if len(saints) > 0 {
+		card += saints + "\n\n"
+	}
+	for _, reading := range day.Readings {
+		card += reading.Display + "\n"
+	}
+
+	// Create the speech
+	builder.AppendParagraph(when + " is the " + day.Titles[0] + ".")
+	builder.AppendParagraph(FastingSpeech(day))
+	builder.AppendParagraph(feasts)
+	builder.AppendParagraph(saints)
+
+	return card
+}
+
+func WhenSpeach(day *orthocal.Day) string {
+	var when string
 
 	now := time.Now().In(TZ)
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
@@ -221,30 +272,36 @@ func FastingSpeach(day *orthocal.Day) string {
 		when = date.Format("Monday, January 2")
 	}
 
+	return when + ","
+}
+
+func FastingSpeech(day *orthocal.Day) string {
+	var text string
+
 	switch day.FastLevel {
 	case 0:
-		text = when + ", there is no fast."
+		text = "On this day there is no fast."
 	case 1:
 		// normal weekly fast
 		if len(day.FastException) > 0 {
-			text = fmt.Sprintf("%s, there is a fast: %s.", when, day.FastException)
+			text = fmt.Sprintf("On this day there is a fast. %s.", day.FastException)
 		} else {
-			text = fmt.Sprintf("%s, there is a fast.", when)
+			text = fmt.Sprintf("On this day there is a fast.")
 		}
 	default:
 		// One of the four great fasts
 		if len(day.FastException) > 0 {
-			text = fmt.Sprintf("%s, is during the %s: %s.", when, day.FastLevelDesc, day.FastException)
+			text = fmt.Sprintf("This day is during the %s. %s.", day.FastLevelDesc, day.FastException)
 		} else {
-			text = fmt.Sprintf("%s, is during the %s.", when, day.FastLevelDesc)
+			text = fmt.Sprintf("This day is during the %s.", day.FastLevelDesc)
 		}
 	}
 
 	return text
 }
 
-func ReadingSpeach(builder *alexa.SSMLTextBuilder, reading orthocal.Reading) {
-	reference := ReferenceSpeach(reading)
+func ReadingSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading) {
+	reference := ReferenceSpeech(reading)
 
 	builder.AppendParagraph("The reading is from " + reference + ".")
 	builder.AppendBreak("medium", "750ms")
@@ -259,8 +316,8 @@ func ReadingSpeach(builder *alexa.SSMLTextBuilder, reading orthocal.Reading) {
 	}
 }
 
-func ReferenceSpeach(reading orthocal.Reading) string {
-	var speach string
+func ReferenceSpeech(reading orthocal.Reading) string {
+	var speech string
 
 	groups := refRe.FindStringSubmatch(reading.Display)
 	number, book, chapter := groups[1], groups[2], groups[3]
@@ -273,25 +330,33 @@ func ReferenceSpeach(reading orthocal.Reading) string {
 	case "Luke":
 		fallthrough
 	case "John":
-		speach = fmt.Sprintf("The Gospel according to %s, chapter %s", book, chapter)
+		speech = fmt.Sprintf("The Holy Gospel according to Saint %s, chapter %s", book, chapter)
 	case "Apostol":
 		format, _ := epistles[strings.ToLower(book)]
 		if len(number) > 0 {
 			format, _ := epistles[strings.ToLower(book)]
 			name := fmt.Sprintf(format, number)
-			speach = fmt.Sprintf("%s, chapter %s", name, chapter)
+			speech = fmt.Sprintf("%s, chapter %s", name, chapter)
 		} else {
-			speach = fmt.Sprintf("%s, chapter %s", format, chapter)
+			speech = fmt.Sprintf("%s, chapter %s", format, chapter)
 		}
 	case "OT":
 		if len(number) > 0 {
-			speach = fmt.Sprintf("<say-as interpret-as=\"ordinal\">%s</say-as> %s, chapter %s", number, book, chapter)
+			speech = fmt.Sprintf("<say-as interpret-as=\"ordinal\">%s</say-as> %s, chapter %s", number, book, chapter)
 		} else {
-			speach = fmt.Sprintf("%s, chapter %s", book, chapter)
+			speech = fmt.Sprintf("%s, chapter %s", book, chapter)
 		}
 	default:
-		speach = strings.Replace(reading.Display, ".", ":", -1)
+		speech = strings.Replace(reading.Display, ".", ":", -1)
 	}
 
-	return speach
+	return speech
+}
+
+func HumanJoin(words []string) string {
+	if len(words) > 1 {
+		return strings.Join(words[:len(words)-1], ", ") + " and " + words[len(words)-1]
+	} else {
+		return words[0]
+	}
 }

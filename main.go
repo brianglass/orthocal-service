@@ -14,7 +14,11 @@ import (
 )
 
 const (
-	TimeZone = "America/Denver"
+	// This is about the middle of the country including Hawaii and Alaska
+	// Folks on the east coast won't much care after midnight and the folks in
+	// Hawaii will have the day change happen at 9pm. That's not ideal, but my
+	// guess is that most people won't be using the service after 9pm.
+	TimeZone = "America/Los_Angeles"
 )
 
 var (
