@@ -126,7 +126,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		builder.AppendParagraph(fmt.Sprintf("There are %d readings for %s.", len(day.Readings), date.Format("Monday, January 2")))
 		builder.AppendBreak("strong", "1500ms")
 		ReadingSpeech(builder, day.Readings[0])
-		builder.AppendBreak("medium", "500ms")
+		builder.AppendBreak("medium", "750ms")
 
 		// Prepare to read the second reading
 		response.SessionAttributes["original_intent"] = "Scriptures"
@@ -175,7 +175,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 
 					builder := alexa.NewSSMLTextBuilder()
 					ReadingSpeech(builder, reading)
-					builder.AppendBreak("medium", "500ms")
+					builder.AppendBreak("medium", "750ms")
 
 					// Prepare to read the next reading (or stop if we run out)
 					response.SessionAttributes["original_intent"] = intent
@@ -218,6 +218,11 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 	var feasts, saints string
 
 	when := WhenSpeach(day)
+
+	// Alexa reads "Ven." very poorly
+	for i, s := range day.Saints {
+		day.Saints[i] = strings.Replace(s, "Ven.", `<sub alias="The Venerable">Ven.</sub>`, -1)
+	}
 
 	// Commemorations
 	if len(day.Feasts) > 1 {
