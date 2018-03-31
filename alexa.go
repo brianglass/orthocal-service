@@ -107,8 +107,9 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), nil)
 		builder := alexa.NewSSMLTextBuilder()
 		card := DaySpeech(builder, day)
+		when := WhenSpeach(day)
 		speech := builder.Build()
-		response.OutputSpeechSSML(speech).Card("Fasting", card)
+		response.OutputSpeechSSML(speech).Card("About "+when, card)
 	case "Scriptures":
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), self.bible)
 
@@ -207,7 +208,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		speech := string(content)
 		card := markupRe.ReplaceAllString(speech, "")
 
-		response.OutputSpeechSSML(speech).Card("Daily Readings", card)
+		response.OutputSpeechSSML(speech).Card("Help", card)
 	case "AMAZON.StopIntent":
 	case "AMAZON.CancelIntent":
 	}
@@ -231,7 +232,7 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 	}
 
 	// Create the Card text
-	card := when + " is the " + day.Titles[0] + ".\n\n"
+	card := when + ", is the " + day.Titles[0] + ".\n\n"
 	if len(day.FastException) > 0 {
 		card += fmt.Sprintf("%s \u2013 %s\n\n", day.FastLevelDesc, day.FastException)
 	} else {
@@ -248,7 +249,7 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 	}
 
 	// Create the speech
-	builder.AppendParagraph(when + " is the " + day.Titles[0] + ".")
+	builder.AppendParagraph(when + ", is the " + day.Titles[0] + ".")
 	builder.AppendParagraph(FastingSpeech(day))
 	builder.AppendParagraph(feasts)
 	builder.AppendParagraph(saints)
@@ -272,7 +273,7 @@ func WhenSpeach(day *orthocal.Day) string {
 		when = date.Format("Monday, January 2")
 	}
 
-	return when + ","
+	return when
 }
 
 func FastingSpeech(day *orthocal.Day) string {
@@ -323,13 +324,7 @@ func ReferenceSpeech(reading orthocal.Reading) string {
 	number, book, chapter := groups[1], groups[2], groups[3]
 
 	switch reading.Book {
-	case "Matthew":
-		fallthrough
-	case "Mark":
-		fallthrough
-	case "Luke":
-		fallthrough
-	case "John":
+	case "Matthew", "Mark", "Luke", "John":
 		speech = fmt.Sprintf("The Holy Gospel according to Saint %s, chapter %s", book, chapter)
 	case "Apostol":
 		format, _ := epistles[strings.ToLower(book)]
