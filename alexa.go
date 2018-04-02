@@ -24,8 +24,8 @@ var epistles = map[string]string{
 	"corinthians":   "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to the Corinthians",
 	"galatians":     "Saint Paul's letter to the Galatians",
 	"ephesians":     "Saint Paul's letter to the Ephesians",
-	"philipians":    "Saint Paul's letter to the Philipians",
-	"colosians":     "Saint Paul's letter to the Colosians",
+	"philippians":   "Saint Paul's letter to the Philippians",
+	"colossians":    "Saint Paul's letter to the Colossians",
 	"thessalonians": "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to the Thessalonians",
 	"timothy":       "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to Timothy",
 	"titus":         "Saint Paul's letter to Titus",
@@ -142,7 +142,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 
 		speech := builder.Build()
 		response.OutputSpeechSSML(speech).Card("Daily Readings", card)
-	case "AMAZON.YesIntent":
+	case "AMAZON.YesIntent", "AMAZON.NextIntent":
 		if intent, ok := request.Session.Attributes["original_intent"]; ok {
 			switch intent {
 			case "Launch", "Scriptures":
@@ -159,7 +159,8 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 						return
 					}
 				} else {
-					response.OutputSpeech("I don't know which day you want me to read the scriptures for.")
+					response.EndSession(true)
+					response.OutputSpeech("I'm not sure what you mean in this context.")
 					return
 				}
 
@@ -207,6 +208,12 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 
 		speech := string(content)
 		card := markupRe.ReplaceAllString(speech, "")
+
+		// Clear out session
+		response.EndSession(false)
+		delete(request.Session.Attributes, "date")
+		delete(request.Session.Attributes, "next_reading")
+		delete(request.Session.Attributes, "original_intent")
 
 		response.OutputSpeechSSML(speech).Card("Help", card)
 	case "AMAZON.StopIntent":
@@ -332,7 +339,10 @@ func ReferenceSpeech(reading orthocal.Reading) string {
 	case "Matthew", "Mark", "Luke", "John":
 		speech = fmt.Sprintf("The Holy Gospel according to Saint %s, chapter %s", book, chapter)
 	case "Apostol":
-		format, _ := epistles[strings.ToLower(book)]
+		format, ok := epistles[strings.ToLower(book)]
+		if !ok {
+			format = book
+		}
 		if len(number) > 0 {
 			format, _ := epistles[strings.ToLower(book)]
 			name := fmt.Sprintf(format, number)
