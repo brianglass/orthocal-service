@@ -47,7 +47,7 @@ func NewCalendarServer(router *mux.Router, db *sql.DB, useJulian, doJump bool, b
 func (self *CalendarServer) todayHandler(writer http.ResponseWriter, request *http.Request) {
 	today := time.Now().In(TZ)
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
-	Day := factory.NewDay(today.Year(), int(today.Month()), today.Day(), self.bible)
+	Day := factory.NewDayWithContext(request.Context(), today.Year(), int(today.Month()), today.Day(), self.bible)
 
 	writer.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(writer)
@@ -67,7 +67,7 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 	day, _ := strconv.Atoi(vars["day"])
 
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
-	Day := factory.NewDay(year, month, day, self.bible)
+	Day := factory.NewDayWithContext(request.Context(), year, month, day, self.bible)
 
 	writer.Header().Set("Content-Type", "application/json")
 	encoder := json.NewEncoder(writer)
@@ -94,7 +94,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 
 	io.WriteString(writer, "[")
 	for day := 1; day <= 31; day++ {
-		d := factory.NewDay(year, month, day, nil)
+		d := factory.NewDayWithContext(request.Context(), year, month, day, nil)
 
 		// NewDay automatically wraps, so break out once we hit the next month
 		if d.Month != month {
@@ -119,5 +119,5 @@ func (self *CalendarServer) icalHandler(writer http.ResponseWriter, request *htt
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 
 	writer.Header().Set("Content-Type", "text/calendar")
-	GenerateCalendar(writer, start, CalendarMaxDays, factory)
+	GenerateCalendar(request.Context(), writer, start, CalendarMaxDays, factory)
 }

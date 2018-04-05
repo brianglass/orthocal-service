@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/brianglass/orthocal"
 	"io"
@@ -9,7 +10,7 @@ import (
 	"unicode"
 )
 
-func GenerateCalendar(writer io.Writer, start time.Time, numDays int, factory *orthocal.DayFactory) {
+func GenerateCalendar(ctx context.Context, writer io.Writer, start time.Time, numDays int, factory *orthocal.DayFactory) {
 	today := time.Now().In(TZ)
 
 	fmt.Fprintf(writer, "BEGIN:VCALENDAR\r\n")
@@ -24,7 +25,7 @@ func GenerateCalendar(writer io.Writer, start time.Time, numDays int, factory *o
 
 	for i := 0; i < numDays; i++ {
 		date := start.AddDate(0, 0, i)
-		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), nil)
+		day := factory.NewDayWithContext(ctx, date.Year(), int(date.Month()), date.Day(), nil)
 		uid := date.Format("2006-01-02") + "@orthocal.info"
 
 		fmt.Fprintf(writer, "BEGIN:VEVENT\r\n")

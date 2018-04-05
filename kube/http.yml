@@ -50,3 +50,7 @@ spec:
               secretKeyRef:
                 name: alexa-app-id
                 key: id
+          - name: DD_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP

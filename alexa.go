@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	maxSpeechLength = 8000
+)
+
 var (
 	markupRe = regexp.MustCompile(`<.*?>`)
 	refRe    = regexp.MustCompile(`(\d*)\s*([\w\s]+)\s+(\d+)`)
@@ -141,6 +145,13 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		}
 
 		speech := builder.Build()
+		if len(speech) > maxSpeechLength {
+			// This ends up in a pretty sad user experience, but I'm not going
+			// to develop a system to break up a single reading into chucks at
+			// this time.
+			speech = `<speak><say-as interpret-as="interjection">Whew</say-as>, the first reading is too long for me. Would you like to hear the next reading?</speak>`
+		}
+
 		response.OutputSpeechSSML(speech).Card("Daily Readings", card)
 	case "AMAZON.YesIntent", "AMAZON.NextIntent":
 		if intent, ok := request.Session.Attributes["original_intent"]; ok {
@@ -192,6 +203,13 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 					}
 
 					speech := builder.Build()
+					if len(speech) > maxSpeechLength {
+						// This ends up in a pretty sad user experience, but I'm not going
+						// to develop a system to break up a single reading into chucks at
+						// this time.
+						speech = `<speak><say-as interpret-as="interjection">Whew</say-as>, that reading is too long for me. Would you like to hear the next reading?</speak>`
+					}
+
 					response.OutputSpeechSSML(speech)
 				}
 			default:
@@ -226,11 +244,6 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 
 	when := WhenSpeach(day)
 
-	// Alexa reads "Ven." very poorly
-	for i, s := range day.Saints {
-		day.Saints[i] = strings.Replace(s, "Ven.", `<sub alias="The Venerable">Ven.</sub>`, -1)
-	}
-
 	// Commemorations
 	if len(day.Feasts) > 1 {
 		feasts = fmt.Sprintf("The feasts celebrated are: %s.", HumanJoin(day.Feasts))
@@ -264,7 +277,7 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 	builder.AppendParagraph(when + ", is the " + day.Titles[0] + ".")
 	builder.AppendParagraph(FastingSpeech(day))
 	builder.AppendParagraph(feasts)
-	builder.AppendParagraph(saints)
+	builder.AppendParagraph(strings.Replace(saints, "Ven.", `<sub alias="The Venerable">Ven.</sub>`, -1))
 
 	return card
 }
@@ -369,4 +382,15 @@ func HumanJoin(words []string) string {
 	} else {
 		return words[0]
 	}
+}
+
+func GetReadingLength(reading orthocal.Reading) int {
+	var length int
+
+	for _, verse := range reading.Passage {
+		text := markupRe.ReplaceAllString(verse.Content, "")
+		length += len(text) + len("<p></p>")
+	}
+
+	return length
 }

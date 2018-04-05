@@ -55,7 +55,6 @@ func main() {
 	bible := orthocal.NewBible(bibledb)
 
 	// Setup HTTP routers
-
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", homeHandler)
@@ -73,8 +72,6 @@ func main() {
 }
 
 func homeHandler(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "text/html")
-
 	t, e := template.ParseFiles("templates/home.html")
 	if e != nil {
 		http.Error(writer, "Template not found.", http.StatusInternalServerError)
@@ -82,6 +79,7 @@ func homeHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	writer.Header().Set("Content-Type", "text/html")
 	if e = t.Execute(writer, nil); e != nil {
 		http.Error(writer, "Template rendering failed.", http.StatusInternalServerError)
 		log.Println(e.Error())
