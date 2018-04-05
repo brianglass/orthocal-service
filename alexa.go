@@ -36,6 +36,7 @@ var epistles = map[string]string{
 	"philemon":      "Saint Paul's letter to Philemon",
 	"hebrews":       "Saint Paul's letter to the Hebrews",
 	"james":         "The Catholic letter of Saint James",
+	"peter":         "The <say-as interpret-as=\"ordinal\">%s</say-as> Catholic letter of Saint Peter",
 	"john":          "The <say-as interpret-as=\"ordinal\">%s</say-as> Catholic letter of Saint John",
 	"jude":          "The Catholic letter of Saint Jude",
 }
