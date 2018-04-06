@@ -46,38 +46,52 @@ type Skill struct {
 	bible     *orthocal.Bible
 	useJulian bool
 	doJump    bool
+	tz        *time.Location
+	appid     string
 }
 
-func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *Skill {
+func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible, tz *time.Location) *Skill {
 	var skill Skill
 
+	skill.appid = appid
 	skill.db = db
-	skill.bible = bible
 	skill.useJulian = useJulian
 	skill.doJump = doJump
+	skill.bible = bible
+	skill.tz = tz
 
-	apps := map[string]interface{}{
-		"/echo/": alexa.EchoApplication{
-			AppID:    appid,
-			OnLaunch: skill.launchHandler,
-			OnIntent: skill.intentHandler,
-		},
-	}
+	/*
+		apps := map[string]interface{}{
+			"/dev/echo/": alexa.EchoApplication{
+				AppID:    appid,
+				OnLaunch: skill.launchHandler,
+				OnIntent: skill.intentHandler,
+			},
+		}
 
-	alexa.Init(apps, router)
+		alexa.Init(apps, router)
+	*/
 
 	return &skill
 }
 
+func (self *Skill) GetEchoApplication() alexa.EchoApplication {
+	return alexa.EchoApplication{
+		AppID:    self.appid,
+		OnLaunch: self.launchHandler,
+		OnIntent: self.intentHandler,
+	}
+}
+
 func (self *Skill) launchHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
-	now := time.Now().In(TZ)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
+	now := time.Now().In(self.tz)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, self.tz)
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 	day := factory.NewDay(today.Year(), int(today.Month()), today.Day(), nil)
 
 	// Create the speech
 	builder := alexa.NewSSMLTextBuilder()
-	card := DaySpeech(builder, day)
+	card := DaySpeech(builder, day, self.tz)
 	builder.AppendParagraph(fmt.Sprintf("There are %d scripture readings.", len(day.Readings)))
 	builder.AppendParagraph("Would you like to hear the readings?")
 	speech := builder.Build()
@@ -97,22 +111,22 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 
 	if when, e := request.GetSlotValue("date"); e == nil && len(when) > 0 {
-		date, e = time.ParseInLocation("2006-01-02", when, TZ)
+		date, e = time.ParseInLocation("2006-01-02", when, self.tz)
 		if e != nil {
 			response.OutputSpeech("I didn't understand the date you requested.")
 			return
 		}
 	} else {
-		now := time.Now().In(TZ)
-		date = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
+		now := time.Now().In(self.tz)
+		date = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, self.tz)
 	}
 
 	switch request.GetIntentName() {
 	case "Day":
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), nil)
 		builder := alexa.NewSSMLTextBuilder()
-		card := DaySpeech(builder, day)
-		when := WhenSpeach(day)
+		card := DaySpeech(builder, day, self.tz)
+		when := WhenSpeach(day, self.tz)
 		speech := builder.Build()
 		response.OutputSpeechSSML(speech).Card("About "+when, card)
 	case "Scriptures":
@@ -189,7 +203,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 				// Get the date from the session; barf if there isn't one
 				if dateString, ok := request.Session.Attributes["date"]; ok {
 					var e error
-					date, e = time.ParseInLocation("2006-01-02", dateString.(string), TZ)
+					date, e = time.ParseInLocation("2006-01-02", dateString.(string), self.tz)
 					if e != nil {
 						response.OutputSpeech("I didn't understand the date you requested.")
 						return
@@ -302,10 +316,10 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 	}
 }
 
-func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
+func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day, tz *time.Location) string {
 	var feasts, saints string
 
-	when := WhenSpeach(day)
+	when := WhenSpeach(day, tz)
 
 	// Commemorations
 	if len(day.Feasts) > 1 {
@@ -345,12 +359,12 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 	return card
 }
 
-func WhenSpeach(day *orthocal.Day) string {
+func WhenSpeach(day *orthocal.Day, tz *time.Location) string {
 	var when string
 
-	now := time.Now().In(TZ)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
-	date := time.Date(day.Year, time.Month(day.Month), day.Day, 0, 0, 0, 0, TZ)
+	now := time.Now().In(tz)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz)
+	date := time.Date(day.Year, time.Month(day.Month), day.Day, 0, 0, 0, 0, tz)
 
 	hours := date.Sub(today).Hours()
 	if 0 <= hours && hours < 24 {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"alexa_dev"
 	"database/sql"
 	"fmt"
 	"github.com/brianglass/orthocal"
@@ -50,6 +51,11 @@ type Skill struct {
 
 func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *Skill {
 	var skill Skill
+	var devSkill *alexa_dev.Skill
+	var devApp alexa.EchoApplication
+
+	devSkill = alexa_dev.NewSkill(router, appid, db, useJulian, doJump, bible, TZ)
+	devApp = devSkill.GetEchoApplication()
 
 	skill.db = db
 	skill.bible = bible
@@ -57,6 +63,7 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 	skill.doJump = doJump
 
 	apps := map[string]interface{}{
+		"/echo/dev/": devApp,
 		"/echo/": alexa.EchoApplication{
 			AppID:    appid,
 			OnLaunch: skill.launchHandler,
@@ -65,6 +72,8 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 	}
 
 	alexa.Init(apps, router)
+
+	log.Println(alexa.Applications)
 
 	return &skill
 }

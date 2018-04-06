@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"github.com/brianglass/orthocal"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -9,7 +10,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"orthocal-service/alexa_dev"
 	"os"
 	"time"
 )
@@ -63,11 +63,17 @@ func main() {
 	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
 	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
 
-	echoRouter := router.NewRoute().Subrouter()
-	NewSkill(echoRouter, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
+	// echoRouter := router.NewRoute().Subrouter()
+	NewSkill(router, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
 
-	echoDevRouter := router.NewRoute("/dev").Subrouter()
-	alexa_dev.NewSkill(echoDevRouter, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
+	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		t, err := route.GetPathTemplate()
+		if err != nil {
+			return err
+		}
+		fmt.Println(t)
+		return nil
+	})
 
 	// Launch the HTTP server
 	router.Use(handlers.CompressHandler)
