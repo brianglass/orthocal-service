@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"orthocal-service/alexa_dev"
 	"os"
 	"time"
 )
@@ -64,6 +65,9 @@ func main() {
 
 	echoRouter := router.NewRoute().Subrouter()
 	NewSkill(echoRouter, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
+
+	echoDevRouter := router.NewRoute("/dev").Subrouter()
+	alexa_dev.NewSkill(echoDevRouter, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
 
 	// Launch the HTTP server
 	router.Use(handlers.CompressHandler)
