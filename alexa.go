@@ -51,16 +51,14 @@ type Skill struct {
 
 func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *Skill {
 	var skill Skill
-	var devSkill *alexa_dev.Skill
-	var devApp alexa.EchoApplication
-
-	devSkill = alexa_dev.NewSkill(router, appid, db, useJulian, doJump, bible, TZ)
-	devApp = devSkill.GetEchoApplication()
 
 	skill.db = db
 	skill.bible = bible
 	skill.useJulian = useJulian
 	skill.doJump = doJump
+
+	devSkill := alexa_dev.NewSkill(router, appid, db, useJulian, doJump, bible, TZ)
+	devApp := devSkill.GetEchoApplication()
 
 	apps := map[string]interface{}{
 		"/echo/dev/": devApp,
