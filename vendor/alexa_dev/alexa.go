@@ -182,13 +182,21 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 			if len(speech) <= maxSpeechLength {
 				response.OutputSpeechSSML(speech).Card("Daily Readings", card)
 				return
-			} else {
+			} else if groupSize == 0 {
 				// This is definitely not exact, but should be a pretty good approximation
 				groupCount := len(speech)/maxSpeechLength + 1
-				groupSize = len(speech) / groupCount
+				groupSize = len(day.Readings[0].Passage) / groupCount
+				log.Printf("Setting groupSize = %d", groupSize)
 				if len(speech)%groupCount > 0 {
 					groupSize++
+					log.Printf("Incrementing groupSize to %d", groupSize)
 				}
+			} else {
+				// This should never happen
+				response.EndSession(true)
+				response.OutputSpeech("I had a problem with a really long reading. Goodbye.")
+				log.Printf("groupSize = %d; speech length = %d", groupSize, len(speech))
+				return
 			}
 		}
 
@@ -280,7 +288,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 					} else {
 						// This is definitely not exact, but should be a pretty good approximation
 						groupCount := len(speech)/maxSpeechLength + 1
-						groupSize = len(speech) / groupCount
+						groupSize = len(day.Readings[0].Passage) / groupCount
 						if len(speech)%groupCount > 0 {
 							groupSize++
 						}
@@ -415,7 +423,7 @@ func ReadingSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading, end
 	}
 
 	if end > 0 {
-		for i := 0; i < end; i++ {
+		for i := 0; i < end && i < len(reading.Passage); i++ {
 			text := markupRe.ReplaceAllString(reading.Passage[i].Content, "")
 			builder.AppendParagraph(text)
 		}
@@ -428,7 +436,7 @@ func ReadingSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading, end
 }
 
 func ReadingRangeSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading, start, end int) {
-	for i := start; i < end; i++ {
+	for i := start; i < end && i < len(reading.Passage); i++ {
 		text := markupRe.ReplaceAllString(reading.Passage[i].Content, "")
 		builder.AppendParagraph(text)
 	}
