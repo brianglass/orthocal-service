@@ -133,6 +133,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		// build the scriptures Speech; we read the first reading on the
 		// initial Scriptures intent request and subsequent readings on
 		// following AMAZON.YesIntent (or AMAZON.NextIntent) requests.
+		var groupSize int
 
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), self.bible)
 
@@ -146,8 +147,6 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 		// long, but it should be a relatively rare exception and is the most
 		// accurate way to make the decision.
 		for {
-			var groupSize int
-
 			builder := alexa.NewSSMLTextBuilder()
 			builder.AppendParagraph(fmt.Sprintf("There are %d readings for %s.", len(day.Readings), date.Format("Monday, January 2")))
 			builder.AppendBreak("strong", "1500ms")
@@ -158,9 +157,10 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 			}
 			builder.AppendBreak("medium", "750ms")
 
-			// Prepare to read the second reading
+			// Prepare to read the second reading or verse group
 			response.SessionAttributes["original_intent"] = "Scriptures"
 			if groupSize > 0 {
+				// We need to break the passage up into groups of verses
 				response.EndSession(false)
 				response.SessionAttributes["next_reading"] = 0
 				response.SessionAttributes["next_verse"] = groupSize
@@ -168,11 +168,13 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 				response.SessionAttributes["date"] = date.Format("2006-01-02")
 				builder.AppendParagraph("This is a long reading. Would you like me to continue?")
 			} else if len(day.Readings) > 1 {
+				// We can move on to the next reading
 				response.EndSession(false)
 				response.SessionAttributes["next_reading"] = 1
 				response.SessionAttributes["date"] = date.Format("2006-01-02")
 				builder.AppendParagraph("Would you like to hear the next reading?")
 			} else {
+				// There are no more readings, so we end the session
 				response.EndSession(true)
 				builder.AppendParagraph("That is the end of the readings.")
 			}
@@ -182,21 +184,13 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 			if len(speech) <= maxSpeechLength {
 				response.OutputSpeechSSML(speech).Card("Daily Readings", card)
 				return
-			} else if groupSize == 0 {
+			} else {
 				// This is definitely not exact, but should be a pretty good approximation
 				groupCount := len(speech)/maxSpeechLength + 1
 				groupSize = len(day.Readings[0].Passage) / groupCount
-				log.Printf("Setting groupSize = %d", groupSize)
-				if len(speech)%groupCount > 0 {
+				if len(day.Readings[0].Passage)%groupCount > 0 {
 					groupSize++
-					log.Printf("Incrementing groupSize to %d", groupSize)
 				}
-			} else {
-				// This should never happen
-				response.EndSession(true)
-				response.OutputSpeech("I had a problem with a really long reading. Goodbye.")
-				log.Printf("groupSize = %d; speech length = %d", groupSize, len(speech))
-				return
 			}
 		}
 
@@ -289,7 +283,7 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 						// This is definitely not exact, but should be a pretty good approximation
 						groupCount := len(speech)/maxSpeechLength + 1
 						groupSize = len(day.Readings[0].Passage) / groupCount
-						if len(speech)%groupCount > 0 {
+						if len(day.Readings[0].Passage)%groupCount > 0 {
 							groupSize++
 						}
 					}
@@ -498,3 +492,23 @@ func GetReadingLength(reading orthocal.Reading) int {
 
 	return length
 }
+
+/*
+func EstimateGroupSize(reading orthocal.Reading) int {
+	// Example: There are 5 readings for Tuesday, April 3.The reading is from
+	// The Holy Gospel according to Saint Matthew, chapter 22
+	const prelude = 36
+
+	// Example: Would you like to hear the next reading?
+	// Example: This is a long reading. Would you like me to continue?
+	const postlude = 36
+
+	readingLength := GetReadingLength(reading)
+
+	groupCount := len(speech)/maxSpeechLength + 1
+	groupSize = len(day.Readings[0].Passage) / groupCount
+	if len(day.Readings[0].Passage)%groupCount > 0 {
+		groupSize++
+	}
+}
+*/

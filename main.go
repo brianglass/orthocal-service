@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/brianglass/orthocal"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -65,15 +64,6 @@ func main() {
 
 	// echoRouter := router.NewRoute().Subrouter()
 	NewSkill(router, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
-
-	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		t, err := route.GetPathTemplate()
-		if err != nil {
-			return err
-		}
-		fmt.Println(t)
-		return nil
-	})
 
 	// Launch the HTTP server
 	router.Use(handlers.CompressHandler)

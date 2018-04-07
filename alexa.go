@@ -71,8 +71,6 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 
 	alexa.Init(apps, router)
 
-	log.Println(alexa.Applications)
-
 	return &skill
 }
 
