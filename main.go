@@ -63,7 +63,7 @@ func main() {
 	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
 
 	// echoRouter := router.NewRoute().Subrouter()
-	NewSkill(router, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible)
+	NewSkill(router, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible, TZ)
 
 	// Launch the HTTP server
 	router.Use(handlers.CompressHandler)

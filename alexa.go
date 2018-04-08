@@ -47,15 +47,17 @@ type Skill struct {
 	bible     *orthocal.Bible
 	useJulian bool
 	doJump    bool
+	tz        *time.Location
 }
 
-func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *Skill {
+func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible, tz *time.Location) *Skill {
 	var skill Skill
 
 	skill.db = db
 	skill.bible = bible
 	skill.useJulian = useJulian
 	skill.doJump = doJump
+	skill.tz = tz
 
 	devSkill := alexa_dev.NewSkill(router, appid, db, useJulian, doJump, bible, TZ)
 	devApp := devSkill.GetEchoApplication()
@@ -75,14 +77,14 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 }
 
 func (self *Skill) launchHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {
-	now := time.Now().In(TZ)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
+	now := time.Now().In(self.tz)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, self.tz)
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 	day := factory.NewDay(today.Year(), int(today.Month()), today.Day(), nil)
 
 	// Create the speech
 	builder := alexa.NewSSMLTextBuilder()
-	card := DaySpeech(builder, day)
+	card := DaySpeech(builder, day, self.tz)
 	builder.AppendParagraph(fmt.Sprintf("There are %d scripture readings.", len(day.Readings)))
 	builder.AppendParagraph("Would you like to hear the readings?")
 	speech := builder.Build()
@@ -102,25 +104,30 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 
 	if when, e := request.GetSlotValue("date"); e == nil && len(when) > 0 {
-		date, e = time.ParseInLocation("2006-01-02", when, TZ)
+		date, e = time.ParseInLocation("2006-01-02", when, self.tz)
 		if e != nil {
 			response.OutputSpeech("I didn't understand the date you requested.")
 			return
 		}
 	} else {
-		now := time.Now().In(TZ)
-		date = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
+		now := time.Now().In(self.tz)
+		date = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, self.tz)
 	}
 
 	switch request.GetIntentName() {
 	case "Day":
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), nil)
 		builder := alexa.NewSSMLTextBuilder()
-		card := DaySpeech(builder, day)
-		when := WhenSpeach(day)
+		card := DaySpeech(builder, day, self.tz)
+		when := WhenSpeach(day, self.tz)
 		speech := builder.Build()
 		response.OutputSpeechSSML(speech).Card("About "+when, card)
 	case "Scriptures":
+		// build the scriptures Speech; we read the first reading on the
+		// initial Scriptures intent request and subsequent readings on
+		// following AMAZON.YesIntent (or AMAZON.NextIntent) requests.
+		var nextReading int
+
 		day := factory.NewDay(date.Year(), int(date.Month()), date.Day(), self.bible)
 
 		// Card display
@@ -129,48 +136,59 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 			card += reading.Display + "\n"
 		}
 
-		// build the Speech; we read the first reading on the initial intent
-		// request and subsequent readings on following AMAZON.YesIntent
-		// requests.
+		reading := day.Readings[nextReading]
+		_, groupSize := EstimateGroupSize(reading.Passage)
+
+		// It's a bit expensive to rebuild the speech if the response is too
+		// long, but it should be a relatively rare exception and is the most
+		// accurate way to make the decision.
 		builder := alexa.NewSSMLTextBuilder()
 		builder.AppendParagraph(fmt.Sprintf("There are %d readings for %s.", len(day.Readings), date.Format("Monday, January 2")))
 		builder.AppendBreak("strong", "1500ms")
-		ReadingSpeech(builder, day.Readings[0])
+		if groupSize > 0 {
+			ReadingSpeech(builder, reading, groupSize)
+		} else {
+			ReadingSpeech(builder, reading, -1)
+		}
 		builder.AppendBreak("medium", "750ms")
 
-		// Prepare to read the second reading
+		// Prepare to read the second reading or verse group
 		response.SessionAttributes["original_intent"] = "Scriptures"
-		if len(day.Readings) > 1 {
+		if groupSize > 0 {
+			// We need to break the passage up into groups of verses
 			response.EndSession(false)
-			response.SessionAttributes["next_reading"] = 1
+			response.SessionAttributes["next_reading"] = nextReading
+			response.SessionAttributes["next_verse"] = groupSize
+			response.SessionAttributes["group_size"] = groupSize
+			response.SessionAttributes["date"] = date.Format("2006-01-02")
+			builder.AppendParagraph("This is a long reading. Would you like me to continue?")
+		} else if nextReading+1 < len(day.Readings) {
+			// We can move on to the next reading
+			response.EndSession(false)
+			response.SessionAttributes["next_reading"] = nextReading + 1
 			response.SessionAttributes["date"] = date.Format("2006-01-02")
 			builder.AppendParagraph("Would you like to hear the next reading?")
 		} else {
+			// There are no more readings, so we end the session
 			response.EndSession(true)
 			builder.AppendParagraph("That is the end of the readings.")
 		}
 
 		speech := builder.Build()
-		if len(speech) > maxSpeechLength {
-			// This ends up in a pretty sad user experience, but I'm not going
-			// to develop a system to break up a single reading into chucks at
-			// this time.
-			speech = `<speak><say-as interpret-as="interjection">Whew</say-as>, the first reading is too long for me. Would you like to hear the next reading?</speak>`
-		}
-
 		response.OutputSpeechSSML(speech).Card("Daily Readings", card)
+
 	case "AMAZON.YesIntent", "AMAZON.NextIntent":
 		if intent, ok := request.Session.Attributes["original_intent"]; ok {
 			switch intent {
 			case "Launch", "Scriptures":
 				// Here we read a single one of the day's readings, tracking
 				// where we are in the Alexa session.
-				var nextReading int
+				var nextReading, groupSize, nextVerse int
 
 				// Get the date from the session; barf if there isn't one
 				if dateString, ok := request.Session.Attributes["date"]; ok {
 					var e error
-					date, e = time.ParseInLocation("2006-01-02", dateString.(string), TZ)
+					date, e = time.ParseInLocation("2006-01-02", dateString.(string), self.tz)
 					if e != nil {
 						response.OutputSpeech("I didn't understand the date you requested.")
 						return
@@ -186,39 +204,70 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 				// Grab the next reading from the session
 				if next_reading, ok := request.Session.Attributes["next_reading"]; ok {
 					nextReading = int(next_reading.(float64))
-				}
-
-				if nextReading < len(day.Readings) {
-					reading := day.Readings[nextReading]
-
-					builder := alexa.NewSSMLTextBuilder()
-					ReadingSpeech(builder, reading)
-					builder.AppendBreak("medium", "750ms")
-
-					// Prepare to read the next reading (or stop if we run out)
-					response.SessionAttributes["original_intent"] = intent
-					response.SessionAttributes["date"] = date.Format("2006-01-02")
-					if nextReading+1 >= len(day.Readings) {
+					if nextReading >= len(day.Readings) {
+						// This should never happen
 						response.EndSession(true)
-						response.SessionAttributes["next_reading"] = nil
-						builder.AppendParagraph("That is the end of the readings.")
-					} else {
-						response.EndSession(false)
-						response.SessionAttributes["next_reading"] = nextReading + 1
-						builder.AppendParagraph("Would you like to hear the next reading?")
+						response.OutputSpeech("There are no more readings.")
+						return
 					}
-
-					speech := builder.Build()
-					if len(speech) > maxSpeechLength {
-						// This ends up in a pretty sad user experience, but I'm not going
-						// to develop a system to break up a single reading into chucks at
-						// this time.
-						speech = `<speak><say-as interpret-as="interjection">Whew</say-as>, that reading is too long for me. Would you like to hear the next reading?</speak>`
-					}
-
-					response.OutputSpeechSSML(speech)
+				} else {
+					// This should never happen
+					response.EndSession(true)
+					response.OutputSpeech("I don't know what you mean in this context.")
+					return
 				}
+
+				reading := day.Readings[nextReading]
+
+				// If we have to break up long passages, we need to get the next verse
+				if group_size, ok := request.Session.Attributes["group_size"]; ok {
+					groupSize = int(group_size.(float64))
+					if next_verse, ok := request.Session.Attributes["next_verse"]; ok {
+						nextVerse = int(next_verse.(float64))
+					}
+				} else {
+					_, groupSize = EstimateGroupSize(reading.Passage)
+				}
+
+				builder := alexa.NewSSMLTextBuilder()
+				if nextVerse > 0 {
+					ReadingRangeSpeech(builder, reading, nextVerse, nextVerse+groupSize)
+				} else if groupSize > 0 {
+					ReadingSpeech(builder, reading, groupSize)
+				} else {
+					ReadingSpeech(builder, reading, -1)
+				}
+				builder.AppendBreak("medium", "750ms")
+
+				// Prepare to read the next reading or verse group (or stop if we run out)
+				response.SessionAttributes["original_intent"] = intent
+				response.SessionAttributes["date"] = date.Format("2006-01-02")
+				if groupSize > 0 && nextVerse+groupSize < len(reading.Passage) {
+					// We need to break the passage up into groups of verses
+					response.EndSession(false)
+					response.SessionAttributes["next_reading"] = nextReading
+					response.SessionAttributes["next_verse"] = nextVerse + groupSize
+					response.SessionAttributes["group_size"] = groupSize
+					builder.AppendParagraph("This is a long reading. Would you like me to continue?")
+				} else if nextReading+1 >= len(day.Readings) {
+					// There are no more readings, so we end the session
+					response.EndSession(true)
+					builder.AppendParagraph("That is the end of the readings.")
+				} else {
+					// We can move on to the next reading
+					response.EndSession(false)
+					response.SessionAttributes["next_reading"] = nextReading + 1
+					delete(response.SessionAttributes, "next_verse")
+					delete(response.SessionAttributes, "group_size")
+					builder.AppendParagraph("Would you like to hear the next reading?")
+				}
+
+				speech := builder.Build()
+				response.OutputSpeechSSML(speech)
 			default:
+				response.EndSession(true)
+				response.OutputSpeech("I'm not sure what you mean in this context.")
+				return
 			}
 		}
 	case "AMAZON.NoIntent":
@@ -235,9 +284,9 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 
 		// Clear out session
 		response.EndSession(false)
-		delete(request.Session.Attributes, "date")
-		delete(request.Session.Attributes, "next_reading")
-		delete(request.Session.Attributes, "original_intent")
+		delete(response.SessionAttributes, "date")
+		delete(response.SessionAttributes, "next_reading")
+		delete(response.SessionAttributes, "original_intent")
 
 		response.OutputSpeechSSML(speech).Card("Help", card)
 	case "AMAZON.StopIntent":
@@ -245,10 +294,10 @@ func (self *Skill) intentHandler(request *alexa.EchoRequest, response *alexa.Ech
 	}
 }
 
-func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
+func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day, tz *time.Location) string {
 	var feasts, saints string
 
-	when := WhenSpeach(day)
+	when := WhenSpeach(day, tz)
 
 	// Commemorations
 	if len(day.Feasts) > 1 {
@@ -288,12 +337,12 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day) string {
 	return card
 }
 
-func WhenSpeach(day *orthocal.Day) string {
+func WhenSpeach(day *orthocal.Day, tz *time.Location) string {
 	var when string
 
-	now := time.Now().In(TZ)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, TZ)
-	date := time.Date(day.Year, time.Month(day.Month), day.Day, 0, 0, 0, 0, TZ)
+	now := time.Now().In(tz)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, tz)
+	date := time.Date(day.Year, time.Month(day.Month), day.Day, 0, 0, 0, 0, tz)
 
 	hours := date.Sub(today).Hours()
 	if 0 <= hours && hours < 24 {
@@ -332,7 +381,7 @@ func FastingSpeech(day *orthocal.Day) string {
 	return text
 }
 
-func ReadingSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading) {
+func ReadingSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading, end int) {
 	reference := ReferenceSpeech(reading)
 
 	builder.AppendParagraph("The reading is from " + reference + ".")
@@ -340,10 +389,25 @@ func ReadingSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading) {
 
 	if len(reading.Passage) == 0 {
 		builder.AppendParagraph("Orthodox Daily could not find that reading.")
+		return
 	}
 
-	for _, verse := range reading.Passage {
-		text := markupRe.ReplaceAllString(verse.Content, "")
+	if end > 0 {
+		for i := 0; i < end && i < len(reading.Passage); i++ {
+			text := markupRe.ReplaceAllString(reading.Passage[i].Content, "")
+			builder.AppendParagraph(text)
+		}
+	} else {
+		for _, verse := range reading.Passage {
+			text := markupRe.ReplaceAllString(verse.Content, "")
+			builder.AppendParagraph(text)
+		}
+	}
+}
+
+func ReadingRangeSpeech(builder *alexa.SSMLTextBuilder, reading orthocal.Reading, start, end int) {
+	for i := start; i < end && i < len(reading.Passage); i++ {
+		text := markupRe.ReplaceAllString(reading.Passage[i].Content, "")
 		builder.AppendParagraph(text)
 	}
 }
@@ -352,24 +416,28 @@ func ReferenceSpeech(reading orthocal.Reading) string {
 	var speech string
 
 	groups := refRe.FindStringSubmatch(reading.Display)
+	if len(groups) < 4 {
+		// The reference is irregular so we just let Alexa do the best she can
+		return strings.Replace(reading.Display, ".", ":", -1)
+	}
+
+	// The book here is the book of the Bible whereas the book below is the
+	// liturgical book
 	number, book, chapter := groups[1], groups[2], groups[3]
 
-	switch reading.Book {
-	case "Matthew", "Mark", "Luke", "John":
+	switch strings.ToLower(reading.Book) {
+	case "matthew", "mark", "luke", "john":
 		speech = fmt.Sprintf("The Holy Gospel according to Saint %s, chapter %s", book, chapter)
-	case "Apostol":
+	case "apostol":
 		format, ok := epistles[strings.ToLower(book)]
 		if !ok {
-			format = book
-		}
-		if len(number) > 0 {
-			format, _ := epistles[strings.ToLower(book)]
-			name := fmt.Sprintf(format, number)
-			speech = fmt.Sprintf("%s, chapter %s", name, chapter)
+			speech = fmt.Sprintf(book+", chapter %s", chapter)
+		} else if len(number) > 0 {
+			speech = fmt.Sprintf(format+", chapter %s", number, chapter)
 		} else {
-			speech = fmt.Sprintf("%s, chapter %s", format, chapter)
+			speech = fmt.Sprintf(format+", chapter %s", chapter)
 		}
-	case "OT":
+	case "ot":
 		if len(number) > 0 {
 			speech = fmt.Sprintf("<say-as interpret-as=\"ordinal\">%s</say-as> %s, chapter %s", number, book, chapter)
 		} else {
@@ -390,13 +458,80 @@ func HumanJoin(words []string) string {
 	}
 }
 
-func GetReadingLength(reading orthocal.Reading) int {
+func GetPassageLength(passage orthocal.Passage, start, end int) int {
 	var length int
 
-	for _, verse := range reading.Passage {
-		text := markupRe.ReplaceAllString(verse.Content, "")
-		length += len(text) + len("<p></p>")
+	if start < 0 {
+		start = 0
+	}
+
+	if end <= 0 {
+		end = len(passage)
+	}
+
+	for i := start; i < end && i < len(passage); i++ {
+		length += len(passage[i].Content) + len("<p></p>")
 	}
 
 	return length
+}
+
+func EstimateGroupSize(passage orthocal.Passage) (int, int) {
+	const (
+		prelude       = len(`<p>There are 29 readings for Tuesday, January 3. The reading is from Saint Paul's <say-as interpret-as=\"ordinal\">2</say-as> letter to the Thessalonians</p>`)
+		postlude      = len(`<p>Would you like to hear the next reading?</p>`)
+		groupPostlude = len(`<p>This is a long reading. Would you like me to continue?</p>`)
+	)
+
+	var (
+		groupCount int
+		groupSize  int
+	)
+
+	verseCount := len(passage)
+
+	passageLength := prelude + GetPassageLength(passage, 0, 0) + postlude
+	if passageLength <= maxSpeechLength {
+		// Yay! We don't have to break the passage into groups.
+		return 1, -1
+	}
+
+	// Start with a good guess and then grow the group count until we find one
+	// that fits.
+	groupCount = passageLength/maxSpeechLength + 1
+
+GroupLoop:
+	for failed := true; failed; groupCount++ {
+		groupSize = verseCount / groupCount
+		if verseCount%groupCount > 0 {
+			groupSize++
+		}
+
+		// loop over the groups and tally up the lengths
+		failed = false
+		for g := 0; g < groupCount; g++ {
+			start := g * groupSize
+			end := start + groupSize
+			length := GetPassageLength(passage, start, end)
+
+			if g == 0 {
+				length += prelude
+			}
+
+			if g == groupCount-1 {
+				length += postlude
+			} else {
+				length += groupPostlude
+			}
+
+			if length > maxSpeechLength {
+				failed = true
+				continue GroupLoop
+			}
+		}
+
+		break
+	}
+
+	return groupCount, groupSize
 }
