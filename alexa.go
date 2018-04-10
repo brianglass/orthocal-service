@@ -9,37 +9,8 @@ import (
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
 	"io/ioutil"
 	"log"
-	"regexp"
 	"time"
 )
-
-const (
-	maxSpeechLength = 8000
-)
-
-var (
-	markupRe = regexp.MustCompile(`<.*?>`)
-	refRe    = regexp.MustCompile(`(\d*)\s*([\w\s]+)\s+(\d+)`)
-)
-
-var epistles = map[string]string{
-	"acts":          "The Acts of the Apostles",
-	"romans":        "Saint Paul's letter to the Romans",
-	"corinthians":   "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to the Corinthians",
-	"galatians":     "Saint Paul's letter to the Galatians",
-	"ephesians":     "Saint Paul's letter to the Ephesians",
-	"philippians":   "Saint Paul's letter to the Philippians",
-	"colossians":    "Saint Paul's letter to the Colossians",
-	"thessalonians": "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to the Thessalonians",
-	"timothy":       "Saint Paul's <say-as interpret-as=\"ordinal\">%s</say-as> letter to Timothy",
-	"titus":         "Saint Paul's letter to Titus",
-	"philemon":      "Saint Paul's letter to Philemon",
-	"hebrews":       "Saint Paul's letter to the Hebrews",
-	"james":         "The Catholic letter of Saint James",
-	"peter":         "The <say-as interpret-as=\"ordinal\">%s</say-as> Catholic letter of Saint Peter",
-	"john":          "The <say-as interpret-as=\"ordinal\">%s</say-as> Catholic letter of Saint John",
-	"jude":          "The Catholic letter of Saint Jude",
-}
 
 type Skill struct {
 	db        *sql.DB
