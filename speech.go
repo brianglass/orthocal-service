@@ -235,7 +235,7 @@ func EstimateGroupSize(passage orthocal.Passage) (groupSize int) {
 			groupSize++
 		}
 
-		// loop over the groups and tally up the lengths
+		// loop over the groups and fail if one of the groups is too big
 		failed = false
 		for g := 0; g < groupCount; g++ {
 			start := g * groupSize

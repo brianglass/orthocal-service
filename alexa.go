@@ -1,11 +1,9 @@
 package main
 
 import (
-	"alexa_dev"
 	"database/sql"
 	"fmt"
 	"github.com/brianglass/orthocal"
-	"github.com/gorilla/mux"
 	alexa "github.com/mikeflynn/go-alexa/skillserver"
 	"io/ioutil"
 	"log"
@@ -20,7 +18,7 @@ type Skill struct {
 	tz        *time.Location
 }
 
-func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible, tz *time.Location) *Skill {
+func NewSkill(appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible, tz *time.Location) alexa.EchoApplication {
 	var skill Skill
 
 	skill.db = db
@@ -29,21 +27,11 @@ func NewSkill(router *mux.Router, appid string, db *sql.DB, useJulian, doJump bo
 	skill.doJump = doJump
 	skill.tz = tz
 
-	devSkill := alexa_dev.NewSkill(router, appid, db, useJulian, doJump, bible, TZ)
-	devApp := devSkill.GetEchoApplication()
-
-	apps := map[string]interface{}{
-		"/echo/dev/": devApp,
-		"/echo/": alexa.EchoApplication{
-			AppID:    appid,
-			OnLaunch: skill.launchHandler,
-			OnIntent: skill.intentHandler,
-		},
+	return alexa.EchoApplication{
+		AppID:    appid,
+		OnLaunch: skill.launchHandler,
+		OnIntent: skill.intentHandler,
 	}
-
-	alexa.Init(apps, router)
-
-	return &skill
 }
 
 func (self *Skill) launchHandler(request *alexa.EchoRequest, response *alexa.EchoResponse) {

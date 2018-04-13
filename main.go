@@ -6,6 +6,8 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	alexa "github.com/mikeflynn/go-alexa/skillserver"
+	"github.com/rs/cors"
 	"html/template"
 	"log"
 	"net/http"
@@ -22,7 +24,8 @@ const (
 )
 
 var (
-	TZ *time.Location
+	TZ         *time.Location
+	AlexaAppId = os.Getenv("ALEXA_APP_ID")
 )
 
 func init() {
@@ -55,6 +58,7 @@ func main() {
 	bible := orthocal.NewBible(bibledb)
 
 	// Setup HTTP routers
+
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", homeHandler)
@@ -62,12 +66,21 @@ func main() {
 	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
 	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
 
-	echoRouter := router.NewRoute().Subrouter()
-	NewSkill(echoRouter, os.Getenv("ALEXA_APP_ID"), ocadb, false, true, bible, TZ)
+	// Setup Alexa skill
 
-	// Launch the HTTP server
+	apps := map[string]interface{}{
+		"/echo/": NewSkill(AlexaAppId, ocadb, false, true, bible, TZ),
+	}
+	alexa.Init(apps, router.NewRoute().Subrouter())
+
+	// Setup middleware
+
+	router.Use(cors.Default().Handler)
 	router.Use(handlers.CompressHandler)
 	router.Use(logHeaderMiddleware)
+
+	// Launch the HTTP server
+
 	http.ListenAndServe(":8080", handlers.CombinedLoggingHandler(os.Stdout, router))
 }
 
