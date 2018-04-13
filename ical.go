@@ -10,6 +10,12 @@ import (
 	"unicode"
 )
 
+const (
+	CalendarWrapWidth = 60
+	CalendarName      = "Orthodox Feasts and Fasts"
+	CalendarTTL       = 12 // hours
+)
+
 func GenerateCalendar(ctx context.Context, writer io.Writer, start time.Time, numDays int, factory *orthocal.DayFactory) {
 	today := time.Now().In(TZ)
 
@@ -54,14 +60,18 @@ func icalDescription(day *orthocal.Day) string {
 		s += saints + `\n\n`
 	}
 
-	if len(day.FastException) > 0 {
+	if len(day.FastException) > 0 && day.FastLevel > 0 {
 		s += fmt.Sprintf("%s \u2013 %s\\n\\n", day.FastLevelDesc, day.FastException)
 	} else {
 		s += fmt.Sprintf("%s\\n\\n", day.FastLevelDesc)
 	}
 
 	for _, r := range day.Readings {
-		s += fmt.Sprintf(`%s\n`, r.Display)
+		if len(r.Description) > 0 {
+			s += fmt.Sprintf(`%s (%s, %s)\n`, r.Display, r.Source, r.Description)
+		} else {
+			s += fmt.Sprintf(`%s (%s)\n`, r.Display, r.Source)
+		}
 	}
 
 	s = strings.Replace(s, ";", `\;`, -1)

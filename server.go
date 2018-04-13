@@ -13,10 +13,7 @@ import (
 )
 
 const (
-	CalendarWrapWidth = 60
-	CalendarName      = "Orthodox Feasts and Fasts"
-	CalendarTTL       = 12 // hours
-	CalendarMaxDays   = 6 * 30
+	CalendarMaxDays = 6 * 30
 )
 
 type CalendarServer struct {
@@ -54,7 +51,7 @@ func (self *CalendarServer) todayHandler(writer http.ResponseWriter, request *ht
 	encoder.SetIndent("", "\t")
 
 	if e := encoder.Encode(Day); e != nil {
-		http.Error(writer, "Not Found", http.StatusInternalServerError)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Could not marshal json for dayHandler: %#n.", e)
 	}
 }
@@ -75,7 +72,7 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 
 	e := encoder.Encode(Day)
 	if e != nil {
-		http.Error(writer, "Not Found", http.StatusInternalServerError)
+		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 		log.Printf("Could not marshal json for dayHandler: %#n.", e)
 	}
 }
@@ -107,7 +104,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 
 		e := encoder.Encode(d)
 		if e != nil {
-			http.Error(writer, "Server Error", http.StatusInternalServerError)
+			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 			log.Printf("Could not marshal json for dayHandler: %#n.", e)
 		}
 	}
