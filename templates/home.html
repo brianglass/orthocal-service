@@ -7,6 +7,9 @@
 				font-family: Helvetica, Verdana, sans-serif;
 				line-height: 1.4em;
 			}
+			h1 {
+				font-size: 35px;
+			}
 		</style>
 	</head>
 	<body>
@@ -16,8 +19,9 @@
 		other information for each day of the liturgical year. This service is
 		meant to be a tool for mobile developers and parish webmasters to use to
 		provide this information to parishioners and other guests. My primary
-		purpose for building it was to build a service to support a daily
-		scripture reading skill for the Amazon Alexa.
+		purpose for building it was to build a service to support 
+		<a href="https://www.amazon.com/Brian-Glass-Orthodox-Daily/dp/B07BTQFVYJ/ref=sr_1_4?s=digital-skills&ie=UTF8&qid=1523730381&sr=1-4&keywords=orthodox">a daily
+			scripture reading skill for the Amazon Alexa</a>.
 		</p>
 
 		<p>Presently the service is Beta-quality. Use at your own risk. With
@@ -44,6 +48,12 @@
 		versification, a few of the Old Testament readings may be incorrect.
 		These are known bugs.</p>
 
+		<h2>Calendar</h2>
+
+		<p>An ical feed is available at:</p>
+
+		<blockquote><a href="/api/oca/ical/">/api/oca/ical/</a></blockquote>
+
 		<h2>RESTful API</h2>
 		<p>The api supports Cross-Origin Resource Sharing (CORS).  Information
 		for a day of the year can be fetched by including the jurisdiction and
@@ -69,11 +79,29 @@
 
 		<blockquote><a href="/api/oca/">/api/oca/</a></blockquote>
 
-		<h2>Calendar</h2>
+		<p>An very simple example of how to fetch and display this information using jQuery follows.</p>
 
-		<p>An ical feed is also available at:</p>
+		<pre>
+	&lt;!doctype html&gt;
+	&lt;html&gt;
+	  &lt;head&gt;
+	  &lt;/head&gt;
+	  &lt;body&gt;
+		&lt;h1 id=&quot;title&quot;&gt;&lt;/h1&gt;
+		&lt;p id=&quot;fast&quot;&gt;&lt;/p&gt;
 
-		<blockquote><a href="/api/oca/ical/">/api/oca/ical/</a></blockquote>
+		&lt;script src=&quot;https://code.jquery.com/jquery-2.1.1.min.js&quot;&gt;&lt;/script&gt;
+		&lt;script&gt;
+		  $(document).ready(function() {
+			$.ajax('https://orthocal.info/api/oca/').done(function (data) {
+			  $('#title').text(data.titles[0]);
+			  $('#fast').text(data.fast_level_desc);
+			});
+		  });
+		&lt;/script&gt;
+	  &lt;/body&gt;
+	&lt;/html&gt;
+		</pre>
 
 		<h2>Bugs</h2>
 		<p>Please report bugs using the <a href="https://github.com/brianglass/orthocal-service/issues">Github issue tracker</a>.</p>
