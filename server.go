@@ -59,6 +59,8 @@ func (self *CalendarServer) todayHandler(writer http.ResponseWriter, request *ht
 func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 
+	// Mux is setup to only send things that match this pattern, so we don't
+	// need to handle the errors.
 	year, _ := strconv.Atoi(vars["year"])
 	month, _ := strconv.Atoi(vars["month"])
 	day, _ := strconv.Atoi(vars["day"])
@@ -80,6 +82,8 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *http.Request) {
 	vars := mux.Vars(request)
 
+	// Mux is setup to only send things that match this pattern, so we don't
+	// need to handle the errors.
 	year, _ := strconv.Atoi(vars["year"])
 	month, _ := strconv.Atoi(vars["month"])
 
@@ -91,12 +95,14 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 
 	io.WriteString(writer, "[")
 	for day := 1; day <= 31; day++ {
-		d := factory.NewDayWithContext(request.Context(), year, month, day, nil)
+		date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 
 		// NewDay automatically wraps, so break out once we hit the next month
-		if d.Month != month {
+		if date.Month() != time.Month(month) {
 			break
 		}
+
+		d := factory.NewDayWithContext(request.Context(), date.Year(), int(date.Month()), date.Day(), nil)
 
 		if day > 1 {
 			io.WriteString(writer, ", ")
