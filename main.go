@@ -66,6 +66,9 @@ func main() {
 	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
 	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
 
+	rocorRouter := router.PathPrefix("/api/rocor").Subrouter()
+	NewCalendarServer(rocorRouter, ocadb, true, true, bible) // Apparently Rocor now does the Lukan jump
+
 	// Setup Alexa skill
 
 	apps := map[string]interface{}{

@@ -25,9 +25,10 @@
 		</p>
 
 		<p>Presently the service is Beta-quality. Use at your own risk. With
-		assistance, I may eventually provide support for other US jurisdictions, but
-		presently only the OCA is supported.  
-		<a href="https://github.com/brianglass/orthocal-service">Source code</a>
+		assistance, I may eventually provide support for other US
+		jurisdictions, but presently only the OCA is fully supported. There is
+		tentative support for ROCOR, but fasting guidelines may not be 100%
+		correct.  <a href="https://github.com/brianglass/orthocal-service">Source code</a>
 		and a <a href="https://hub.docker.com/r/brianglass/orthocal-service/">docker
 		image</a> for self-hosting are freely available.</p>
 
@@ -45,8 +46,7 @@
 		license terms. At this point I have chosen to stick with the King James
 		Version. While not ideal, many clergy consider this to be one of the
 		best options for Orthodox. Because the rubrics refer to Septuagint
-		versification, a few of the Old Testament readings may be incorrect.
-		These are known bugs.</p>
+		versification, a few of the Old Testament readings may be incorrect.</p>
 
 		<h2>Calendar</h2>
 
@@ -79,13 +79,16 @@
 
 		<blockquote><a href="/api/oca/">/api/oca/</a></blockquote>
 
-		<p>An very simple example of how to fetch and display this information using jQuery follows.</p>
+		<p>Tentative support for ROCOR (and other jurisdictions that use the
+		Julian calendar) is available as well. For example:</p>
+
+		<blockquote><a href="/api/rocor/2018/1/7/">/api/rocor/2018/1/7/</a></blockquote>
+
+		<p>A very simple example of how to fetch and display this information using jQuery follows.</p>
 
 		<pre>
 	&lt;!doctype html&gt;
 	&lt;html&gt;
-	  &lt;head&gt;
-	  &lt;/head&gt;
 	  &lt;body&gt;
 		&lt;h1 id=&quot;title&quot;&gt;&lt;/h1&gt;
 		&lt;p id=&quot;fast&quot;&gt;&lt;/p&gt;
