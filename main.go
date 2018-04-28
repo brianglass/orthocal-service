@@ -61,8 +61,6 @@ func main() {
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", homeHandler)
-
 	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
 	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
 
@@ -85,22 +83,6 @@ func main() {
 	// Launch the HTTP server
 
 	http.ListenAndServe(":8080", handlers.CombinedLoggingHandler(os.Stdout, router))
-}
-
-func homeHandler(writer http.ResponseWriter, request *http.Request) {
-	t, e := template.ParseFiles("templates/home.html")
-	if e != nil {
-		http.Error(writer, "Template not found.", http.StatusInternalServerError)
-		log.Println(e.Error())
-		return
-	}
-
-	writer.Header().Set("Content-Type", "text/html")
-	if e = t.Execute(writer, nil); e != nil {
-		http.Error(writer, "Template rendering failed.", http.StatusInternalServerError)
-		log.Println(e.Error())
-		return
-	}
 }
 
 func logHeaderMiddleware(next http.Handler) http.Handler {

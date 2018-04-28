@@ -97,7 +97,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 	for day := 1; day <= 31; day++ {
 		date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.Local)
 
-		// NewDay automatically wraps, so break out once we hit the next month
+		// time.Date automatically wraps, so break out once we hit the next month
 		if date.Month() != time.Month(month) {
 			break
 		}

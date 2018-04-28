@@ -8,6 +8,19 @@ metadata:
 spec:
   tls:
   - secretName: orthocal-info-tls
-  backend:
-    serviceName: orthocal-http
-    servicePort: 80
+  rules:
+    - host: orthocal.info
+      http:
+        paths:
+        - path: /api/*
+          backend:
+            serviceName: orthocal-http
+            servicePort: 80
+        - path: /echo/*
+          backend:
+            serviceName: orthocal-http
+            servicePort: 80
+        - path: /*
+          backend:
+            serviceName: orthocal-client
+            servicePort: 80
