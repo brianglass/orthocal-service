@@ -5,8 +5,8 @@ metadata:
   name: orthocal-http
   namespace: orthocal
   labels:
-    app: orthocal
-    service: http
+    app: orthocal-service
+    service: api
 spec:
   type: NodePort
   ports:
@@ -14,24 +14,24 @@ spec:
     port: 80
     targetPort: 8080
   selector:
-    app: orthocal
-    service: http
+    app: orthocal-service
+    service: api
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
-  name: http
+  name: orthocal-service
   namespace: orthocal
 spec:
   replicas: 2
   template:
     metadata:
       labels:
-        app: orthocal
-        service: http
+        app: orthocal-service
+        service: api
     spec:
       containers:
-      - name: orthocal
+      - name: orthocal-service
         imagePullPolicy: Always
         image: brianglass/orthocal-service:latest
         resources:
