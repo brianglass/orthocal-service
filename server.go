@@ -14,6 +14,7 @@ import (
 
 const (
 	CalendarMaxDays = 7 * 30
+	CacheControl = "max-age=3600"
 )
 
 type CalendarServer struct {
@@ -69,6 +70,7 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 	Day := factory.NewDayWithContext(request.Context(), year, month, day, self.bible)
 
 	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Cache-Control", CacheControl)
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "\t")
 
@@ -90,6 +92,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 
 	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Cache-Control", CacheControl)
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "\t")
 
@@ -122,5 +125,6 @@ func (self *CalendarServer) icalHandler(writer http.ResponseWriter, request *htt
 	factory := orthocal.NewDayFactory(self.useJulian, self.doJump, self.db)
 
 	writer.Header().Set("Content-Type", "text/calendar")
+	writer.Header().Set("Cache-Control", CacheControl)
 	GenerateCalendar(request.Context(), writer, start, CalendarMaxDays, factory)
 }
