@@ -14,11 +14,11 @@ spec:
         paths:
         - path: /api/*
           backend:
-            serviceName: orthocal-http
+            serviceName: orthocal-service
             servicePort: 80
         - path: /echo/*
           backend:
-            serviceName: orthocal-http
+            serviceName: orthocal-service
             servicePort: 80
         - path: /*
           backend:

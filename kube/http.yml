@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: orthocal-http
+  name: orthocal-service
   namespace: orthocal
   labels:
     app: orthocal-service
@@ -50,7 +50,3 @@ spec:
               secretKeyRef:
                 name: alexa-app-id
                 key: id
-          - name: DD_AGENT_HOST
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP

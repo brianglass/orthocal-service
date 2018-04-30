@@ -17,7 +17,7 @@ run: docker
 deploy: docker
 	docker tag orthocal-service:latest brianglass/orthocal-service:latest
 	docker push brianglass/orthocal-service:latest
-	kubectl delete pods -l app=orthocal --namespace=${NAMESPACE}
+	kubectl delete pods -l app=orthocal-service --namespace=${NAMESPACE}
 
 restart:
-	kubectl delete pods -l app=orthocal --namespace=${NAMESPACE}
+	kubectl delete pods -l app=orthocal-service --namespace=${NAMESPACE}

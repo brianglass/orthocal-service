@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	CalendarMaxDays = 6 * 30
+	CalendarMaxDays = 7 * 30
 )
 
 type CalendarServer struct {
