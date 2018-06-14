@@ -56,8 +56,8 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day, tz *time.Locat
 
 	// Create the Card text
 	card = when + ", is the " + day.Titles[0] + ".\n\n"
-	if len(day.FastException) > 0 {
-		card += fmt.Sprintf("%s \u2013 %s\n\n", day.FastLevelDesc, day.FastException)
+	if len(day.FastExceptionDesc) > 0 {
+		card += fmt.Sprintf("%s \u2013 %s\n\n", day.FastLevelDesc, day.FastExceptionDesc)
 	} else {
 		card += fmt.Sprintf("%s\n\n", day.FastLevelDesc)
 	}
@@ -103,15 +103,15 @@ func FastingSpeech(day *orthocal.Day) (text string) {
 		text = "On this day there is no fast."
 	case 1:
 		// normal weekly fast
-		if len(day.FastException) > 0 {
-			text = fmt.Sprintf("On this day there is a fast. %s.", day.FastException)
+		if len(day.FastExceptionDesc) > 0 {
+			text = fmt.Sprintf("On this day there is a fast. %s.", day.FastExceptionDesc)
 		} else {
 			text = fmt.Sprintf("On this day there is a fast.")
 		}
 	default:
 		// One of the four great fasts
-		if len(day.FastException) > 0 {
-			text = fmt.Sprintf("This day is during the %s. %s.", day.FastLevelDesc, day.FastException)
+		if len(day.FastExceptionDesc) > 0 {
+			text = fmt.Sprintf("This day is during the %s. %s.", day.FastLevelDesc, day.FastExceptionDesc)
 		} else {
 			text = fmt.Sprintf("This day is during the %s.", day.FastLevelDesc)
 		}

@@ -60,8 +60,8 @@ func icalDescription(day *orthocal.Day) string {
 		s += saints + `\n\n`
 	}
 
-	if len(day.FastException) > 0 && day.FastLevel > 0 {
-		s += fmt.Sprintf("%s \u2013 %s\\n\\n", day.FastLevelDesc, day.FastException)
+	if len(day.FastExceptionDesc) > 0 && day.FastLevel > 0 {
+		s += fmt.Sprintf("%s \u2013 %s\\n\\n", day.FastLevelDesc, day.FastExceptionDesc)
 	} else {
 		s += fmt.Sprintf("%s\\n\\n", day.FastLevelDesc)
 	}
