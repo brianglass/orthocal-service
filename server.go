@@ -14,7 +14,7 @@ import (
 
 const (
 	CalendarMaxDays = 7 * 30
-	CacheControl = "max-age=3600"
+	CacheControl    = "max-age=14400"
 )
 
 type CalendarServer struct {
