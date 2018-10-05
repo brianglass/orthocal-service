@@ -23,7 +23,7 @@ metadata:
   name: orthocal-service
   namespace: orthocal
 spec:
-  replicas: 2
+  replicas: 3
   template:
     metadata:
       labels:
@@ -36,10 +36,10 @@ spec:
         image: brianglass/orthocal-service:latest
         resources:
           requests:
-            cpu: 256m
-            memory: 32Mi
+            cpu: 32m
+            memory: 25Mi
           limits:
-            cpu: 940m
+            cpu: 256m
             memory: 128Mi
         ports:
         - name: http
