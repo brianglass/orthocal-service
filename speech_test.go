@@ -2,15 +2,18 @@ package main
 
 import (
 	"database/sql"
+	alexa "github.com/brianglass/go-alexa/skillserver"
 	"github.com/brianglass/orthocal"
 	_ "github.com/mattn/go-sqlite3"
+	"os"
+	"strings"
 	"testing"
 )
 
 func TestEstimateGroupSize(t *testing.T) {
 	db, e := sql.Open("sqlite3", "kjv.db")
 	if e != nil {
-		t.Errorf("Got error opening database: %#n.", e)
+		t.Errorf("Got error opening database: %#v.", e)
 	}
 	bible := orthocal.NewBible(db)
 
@@ -32,5 +35,22 @@ func TestEstimateGroupSize(t *testing.T) {
 				t.Errorf("groupSize should be %d but is %d", tc.groupSize, groupSize)
 			}
 		})
+	}
+}
+
+func TestDaySpeechNoTitles(t *testing.T) {
+	db, e := sql.Open("sqlite3", "oca_calendar.db")
+	if e != nil {
+		os.Exit(1)
+	}
+	defer db.Close()
+	factory := orthocal.NewDayFactory(false, false, db)
+	// This day has no titles
+	day := factory.NewDay(2019, 2, 11, nil)
+
+	builder := alexa.NewSSMLTextBuilder()
+	card := DaySpeech(builder, day, TZ)
+	if !strings.HasPrefix(card, "No Fast") {
+		t.Errorf("Card should start with fasting information, but doesn't.\n")
 	}
 }

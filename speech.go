@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
+	alexa "github.com/brianglass/go-alexa/skillserver"
 	"github.com/brianglass/orthocal"
-	alexa "github.com/mikeflynn/go-alexa/skillserver"
 	"regexp"
 	"strings"
 	"time"
@@ -55,7 +55,9 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day, tz *time.Locat
 	}
 
 	// Create the Card text
-	card = when + ", is the " + day.Titles[0] + ".\n\n"
+	if len(day.Titles) > 0 {
+		card = when + ", is the " + day.Titles[0] + ".\n\n"
+	}
 	if len(day.FastExceptionDesc) > 0 {
 		card += fmt.Sprintf("%s \u2013 %s\n\n", day.FastLevelDesc, day.FastExceptionDesc)
 	} else {
@@ -72,7 +74,9 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day, tz *time.Locat
 	}
 
 	// Create the speech
-	builder.AppendParagraph(when + ", is the " + day.Titles[0] + ".")
+	if len(day.Titles) > 0 {
+		builder.AppendParagraph(when + ", is the " + day.Titles[0] + ".")
+	}
 	builder.AppendParagraph(FastingSpeech(day))
 	builder.AppendParagraph(feasts)
 	builder.AppendParagraph(strings.Replace(saints, "Ven.", `<sub alias="The Venerable">Ven.</sub>`, -1))

@@ -2,11 +2,11 @@ package main
 
 import (
 	"database/sql"
+	alexa "github.com/brianglass/go-alexa/skillserver"
 	"github.com/brianglass/orthocal"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
-	alexa "github.com/mikeflynn/go-alexa/skillserver"
 	"github.com/rs/cors"
 	"html/template"
 	"log"
@@ -44,13 +44,13 @@ func main() {
 	// Open up all the requisite databases
 
 	if ocadb, e = sql.Open("sqlite3", "oca_calendar.db"); e != nil {
-		log.Printf("Got error opening database: %#n. Exiting.", e)
+		log.Printf("Got error opening database: %#v. Exiting.", e)
 		os.Exit(1)
 	}
 	defer ocadb.Close()
 
 	if bibledb, e = sql.Open("sqlite3", "kjv.db"); e != nil {
-		log.Printf("Got error opening database: %#n. Exiting.", e)
+		log.Printf("Got error opening database: %#v. Exiting.", e)
 		os.Exit(1)
 	}
 	defer bibledb.Close()

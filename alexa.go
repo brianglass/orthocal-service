@@ -3,8 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	alexa "github.com/brianglass/go-alexa/skillserver"
 	"github.com/brianglass/orthocal"
-	alexa "github.com/mikeflynn/go-alexa/skillserver"
 	"io/ioutil"
 	"log"
 	"time"

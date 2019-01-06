@@ -53,7 +53,7 @@ func (self *CalendarServer) todayHandler(writer http.ResponseWriter, request *ht
 
 	if e := encoder.Encode(Day); e != nil {
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Could not marshal json for dayHandler: %#n.", e)
+		log.Printf("Could not marshal json for dayHandler: %#v.", e)
 	}
 }
 
@@ -77,7 +77,7 @@ func (self *CalendarServer) dayHandler(writer http.ResponseWriter, request *http
 	e := encoder.Encode(Day)
 	if e != nil {
 		http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Could not marshal json for dayHandler: %#n.", e)
+		log.Printf("Could not marshal json for dayHandler: %#v.", e)
 	}
 }
 
@@ -114,7 +114,7 @@ func (self *CalendarServer) monthHandler(writer http.ResponseWriter, request *ht
 		e := encoder.Encode(d)
 		if e != nil {
 			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
-			log.Printf("Could not marshal json for dayHandler: %#n.", e)
+			log.Printf("Could not marshal json for dayHandler: %#v.", e)
 		}
 	}
 	io.WriteString(writer, "]")
