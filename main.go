@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/cors"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -62,7 +61,8 @@ func main() {
 	router := mux.NewRouter()
 
 	// Google health check expects to to receive a response for /. Do not delete.
-	router.HandleFunc("/", homeHandler)
+	router.HandleFunc("/", healthHandler)
+	router.HandleFunc("/healthz", healthHandler)
 
 	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
 	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
@@ -88,20 +88,10 @@ func main() {
 	http.ListenAndServe(":8080", handlers.CombinedLoggingHandler(os.Stdout, router))
 }
 
-func homeHandler(writer http.ResponseWriter, request *http.Request) {
-	t, e := template.ParseFiles("templates/home.html")
-	if e != nil {
-		http.Error(writer, "Template not found.", http.StatusInternalServerError)
-		log.Println(e.Error())
-		return
-	}
-
-	writer.Header().Set("Content-Type", "text/html")
-	if e = t.Execute(writer, nil); e != nil {
-		http.Error(writer, "Template rendering failed.", http.StatusInternalServerError)
-		log.Println(e.Error())
-		return
-	}
+func healthHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Set("Content-Type", "text/plain")
+	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte("ok"))
 }
 
 func logHeaderMiddleware(next http.Handler) http.Handler {

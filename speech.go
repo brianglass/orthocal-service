@@ -78,7 +78,7 @@ func DaySpeech(builder *alexa.SSMLTextBuilder, day *orthocal.Day, tz *time.Locat
 		builder.AppendParagraph(when + ", is the " + day.Titles[0] + ".")
 	}
 	builder.AppendParagraph(FastingSpeech(day))
-	builder.AppendParagraph(feasts)
+	builder.AppendParagraph(strings.Replace(feasts, "Ven.", `<sub alias="The Venerable">Ven.</sub>`, -1))
 	builder.AppendParagraph(strings.Replace(saints, "Ven.", `<sub alias="The Venerable">Ven.</sub>`, -1))
 
 	return card

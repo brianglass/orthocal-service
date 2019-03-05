@@ -50,3 +50,7 @@ spec:
               secretKeyRef:
                 name: alexa-app-id
                 key: id
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
