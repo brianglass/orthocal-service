@@ -7,6 +7,7 @@ spec:
   secretName: orthocal-info-tls
   issuerRef:
     name: letsencrypt
+    kind: ClusterIssuer
   commonName: orthocal.info
   dnsNames:
   - orthocal.info
