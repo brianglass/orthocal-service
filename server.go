@@ -19,18 +19,20 @@ const (
 
 type CalendarServer struct {
 	db        *sql.DB
-	bible     *orthocal.Bible
+	bible     orthocal.Bible
 	useJulian bool
 	doJump    bool
+	title     string
 }
 
-func NewCalendarServer(router *mux.Router, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible) *CalendarServer {
+func NewCalendarServer(router *mux.Router, db *sql.DB, useJulian, doJump bool, bible orthocal.Bible, title string) *CalendarServer {
 	var self CalendarServer
 
 	self.db = db
 	self.bible = bible
 	self.useJulian = useJulian
 	self.doJump = doJump
+	self.title = title
 
 	r := router.Methods("GET", "HEAD").Subrouter()
 
@@ -126,5 +128,5 @@ func (self *CalendarServer) icalHandler(writer http.ResponseWriter, request *htt
 
 	writer.Header().Set("Content-Type", "text/calendar")
 	writer.Header().Set("Cache-Control", CacheControl)
-	GenerateCalendar(request.Context(), writer, start, CalendarMaxDays, factory)
+	GenerateCalendar(request.Context(), writer, start, CalendarMaxDays, factory, self.title)
 }

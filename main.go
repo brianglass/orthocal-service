@@ -2,8 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"github.com/brianglass/english_bible"
 	alexa "github.com/brianglass/go-alexa/skillserver"
-	"github.com/brianglass/orthocal"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
@@ -48,13 +48,13 @@ func main() {
 	}
 	defer ocadb.Close()
 
-	if bibledb, e = sql.Open("sqlite3", "kjv.db"); e != nil {
+	if bibledb, e = sql.Open("sqlite3", "english.db"); e != nil {
 		log.Printf("Got error opening database: %#v. Exiting.", e)
 		os.Exit(1)
 	}
 	defer bibledb.Close()
 
-	bible := orthocal.NewBible(bibledb)
+	bible := english_bible.NewBible(bibledb)
 
 	// Setup HTTP routers
 
@@ -65,10 +65,10 @@ func main() {
 	router.HandleFunc("/healthz", healthHandler)
 
 	ocaRouter := router.PathPrefix("/api/oca").Subrouter()
-	NewCalendarServer(ocaRouter, ocadb, false, true, bible)
+	NewCalendarServer(ocaRouter, ocadb, false, true, bible, "OCA")
 
 	rocorRouter := router.PathPrefix("/api/rocor").Subrouter()
-	NewCalendarServer(rocorRouter, ocadb, true, true, bible) // Apparently Rocor now does the Lukan jump
+	NewCalendarServer(rocorRouter, ocadb, true, true, bible, "ROCOR") // Apparently Rocor now does the Lukan jump
 
 	// Setup Alexa skill
 

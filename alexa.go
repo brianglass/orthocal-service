@@ -12,13 +12,13 @@ import (
 
 type Skill struct {
 	db        *sql.DB
-	bible     *orthocal.Bible
+	bible     orthocal.Bible
 	useJulian bool
 	doJump    bool
 	tz        *time.Location
 }
 
-func NewSkill(appid string, db *sql.DB, useJulian, doJump bool, bible *orthocal.Bible, tz *time.Location) alexa.EchoApplication {
+func NewSkill(appid string, db *sql.DB, useJulian, doJump bool, bible orthocal.Bible, tz *time.Location) alexa.EchoApplication {
 	var skill Skill
 
 	skill.db = db

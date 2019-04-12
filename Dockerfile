@@ -19,7 +19,7 @@ WORKDIR /root
 RUN apk --no-cache add tzdata ca-certificates
 
 COPY --from=builder /go/src/github.com/brianglass/orthocal/*.db ./
-COPY templates ./templates
+COPY --from=builder /go/src/github.com/brianglass/english_bible/bible.db ./english.db
 COPY --from=builder /go/src/github.com/brianglass/orthocal-service/orthocal-service ./
 
 EXPOSE 8080
